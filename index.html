@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TSLA预测">
+<meta name="theme-color" content="#05080a">
+<title>TSLA · 股价监控</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg: #05080a;
+  --s1: #0c1116;
+  --s2: #111820;
+  --border: #1a2530;
+  --accent: #e31937;   /* Tesla red */
+  --gold: #c9a84c;
+  --green: #22c55e;
+  --red: #ef4444;
+  --blue: #38bdf8;
+  --text: #d4dde6;
+  --muted: #3d5266;
+  --sat: env(safe-area-inset-top,0px);
+  --sab: env(safe-area-inset-bottom,0px);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow-x:hidden;}
+
+body {
+  font-family: 'DM Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  padding: calc(var(--sat) + 10px) 12px calc(var(--sab) + 10px);
+  background-image:
+    radial-gradient(ellipse at 15% 0%, rgba(227,25,55,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 100%, rgba(56,189,248,0.04) 0%, transparent 50%);
+  min-height: 100vh;
+}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes flashGreen{0%,100%{background:transparent}50%{background:rgba(34,197,94,.12)}}
+@keyframes flashRed{0%,100%{background:transparent}50%{background:rgba(239,68,68,.12)}}
+
+/* HEADER */
+.hdr {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 12px;
+}
+.logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  line-height: 1;
+}
+.logo sub {
+  display: block;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.status-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 10px; color: var(--muted);
+}
+.led{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.led.ok{background:var(--green);box-shadow:0 0 5px var(--green);animation:blink 2s infinite;}
+.led.loading{background:var(--gold);animation:blink .4s infinite;}
+.led.err{background:var(--red);}
+
+/* PRICE CARD */
+.price-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp .4s ease;
+}
+.price-card::before {
+  content: 'TSLA';
+  position: absolute; top: 12px; right: 16px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 48px; font-weight: 800;
+  color: rgba(227,25,55,.06);
+  letter-spacing: 4px; line-height: 1;
+  pointer-events: none;
+}
+.price-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.price-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); margin-bottom: 4px; }
+.price-big {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 52px; font-weight: 800;
+  letter-spacing: 1px; line-height: 1;
+  color: var(--text); transition: color .3s;
+}
+.price-big.up{color:var(--green);}
+.price-big.down{color:var(--red);}
+.price-right{text-align:right;}
+.chg{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:1px;}
+.ptime{font-size:9px;color:var(--muted);margin-top:3px;}
+.mktstat{
+  display:inline-block;font-size:8px;letter-spacing:2px;
+  padding:2px 7px;border-radius:4px;margin-top:4px;
+  background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2);
+}
+.mktstat.closed{background:rgba(61,82,102,.2);color:var(--muted);border-color:var(--border);}
+
+/* Track row */
+.track-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.tcell .tlabel{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;}
+.tcell .tval{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:18px;font-weight:700;letter-spacing:1px;color:var(--text);
+}
+.tcell .tval.up{color:var(--green);}
+.tcell .tval.down{color:var(--red);}
+.tcell .tval.pending{color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;}
+.tcell .tsub{font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* DAY PREDICTION */
+.day-card {
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  background: var(--s1);
+  position: relative; overflow: hidden;
+  transition: border-color .4s, background .4s;
+}
+.day-card.up-card{border-color:rgba(34,197,94,.35);background:linear-gradient(135deg,#091a0e 0%,var(--s1) 100%);}
+.day-card.down-card{border-color:rgba(239,68,68,.35);background:linear-gradient(135deg,#1a0909 0%,var(--s1) 100%);}
+.day-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;transition:background .4s;
+}
+.day-card.up-card::before{background:linear-gradient(90deg,var(--green),transparent);}
+.day-card.down-card::before{background:linear-gradient(90deg,var(--red),transparent);}
+
+.card-title{font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+
+.pred-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.pred-dir{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:40px;font-weight:800;letter-spacing:2px;line-height:1;
+  transition:color .3s;
+}
+.pred-dir.up{color:var(--green);}
+.pred-dir.down{color:var(--red);}
+.pred-right{text-align:right;}
+.prob-lbl{font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:2px;}
+.prob-big{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:30px;font-weight:800;letter-spacing:1px;
+  transition:color .3s;
+}
+.prob-big.up{color:var(--green);}
+.prob-big.down{color:var(--red);}
+
+.bars{display:flex;gap:8px;margin-bottom:10px;}
+.bw{flex:1;}
+.bn{font-size:9px;color:var(--muted);margin-bottom:3px;}
+.bt{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.bf{height:100%;border-radius:3px;transition:width .8s ease;}
+.bf.up{background:var(--green);}
+.bf.down{background:var(--red);}
+.bp{font-size:11px;font-weight:500;margin-top:3px;}
+
+.reason{
+  font-size:10px;color:var(--text);opacity:.5;
+  line-height:1.8;padding-top:10px;
+  border-top:1px solid var(--border);word-break:break-all;
+}
+
+/* HOUR SLOTS */
+.hour-section{margin-bottom:10px;}
+.section-title{
+  font-size:9px;letter-spacing:3px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.hour-grid{display:flex;flex-direction:column;gap:6px;}
+.hour-slot{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;
+  display:grid;grid-template-columns:auto 1fr auto auto;
+  align-items:center;gap:10px;
+  transition:border-color .3s;
+}
+.hour-slot.active{border-color:var(--accent);background:var(--s2);}
+.hour-slot.completed-up{border-color:rgba(34,197,94,.2);}
+.hour-slot.completed-down{border-color:rgba(239,68,68,.2);}
+
+.hs-time{font-size:11px;color:var(--muted);min-width:88px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;}
+.hs-pred{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;}
+.hs-pred.up{color:var(--green);}
+.hs-pred.down{color:var(--red);}
+.hs-pred.pending{color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;}
+.hs-prob{font-size:10px;color:var(--muted);text-align:right;}
+.hs-result{font-size:10px;text-align:right;min-width:52px;}
+.hs-result.up{color:var(--green);}
+.hs-result.down{color:var(--red);}
+.hs-result.pending{color:var(--muted);}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.mc{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.ml{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.mv{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;letter-spacing:1px;line-height:1;}
+.ms{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* LOG */
+.log{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;max-height:140px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.log-title{font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:8px;}
+.lr{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;align-items:center;}
+.lr:last-child{border-bottom:none;}
+.lt{color:var(--muted);min-width:52px;flex-shrink:0;}
+.lp{color:var(--gold);min-width:60px;flex-shrink:0;}
+.ld{font-weight:500;flex:1;}
+.lpr{color:var(--muted);font-size:9px;flex-shrink:0;}
+
+/* FOOTER */
+.footer{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.btn{flex:1;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:11px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;border-radius:8px;transition:all .2s;}
+.btn:active{background:var(--accent);color:#fff;transform:scale(.97);}
+.cd{font-size:10px;color:var(--muted);min-width:70px;text-align:right;}
+.disc{text-align:center;font-size:9px;color:var(--muted);padding-bottom:4px;}
+
+/* MANUAL */
+.manual-input{display:none;gap:8px;margin-bottom:10px;}
+.manual-input input{flex:1;background:var(--s1);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-family:'DM Mono',monospace;font-size:14px;outline:none;}
+.manual-input input:focus{border-color:var(--accent);}
+.manual-input input::placeholder{color:var(--muted);}
+.err-msg{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--red);margin-bottom:10px;display:none;}
+
+.up{color:var(--green);}
+.down{color:var(--red);}
+.neutral{color:var(--blue);}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="logo">TSLA
+    <sub>股价监控 · 日线+小时预测</sub>
+  </div>
+  <div class="status-pill">
+    <div class="led" id="led"></div>
+    <span id="statusText">连接中</span>
+  </div>
+</div>
+
+<div class="err-msg" id="errMsg"></div>
+<div class="manual-input" id="manualWrap">
+  <input type="number" id="manualPrice" placeholder="手动输入TSLA价格 如 376" inputmode="decimal"/>
+  <button class="btn" style="flex:0;padding:10px 14px" onclick="useManual()">确认</button>
+</div>
+
+<!-- 价格卡片 -->
+<div class="price-card">
+  <div class="price-top">
+    <div>
+      <div class="price-label">TESLA · NASDAQ</div>
+      <div class="price-big neutral" id="priceMain">---.-</div>
+    </div>
+    <div class="price-right">
+      <div class="chg" id="priceChg">--</div>
+      <div class="ptime" id="priceTime">--</div>
+      <div class="mktstat closed" id="mktStat">-- 市场</div>
+    </div>
+  </div>
+  <!-- 当日追踪 -->
+  <div class="track-grid">
+    <div class="tcell">
+      <div class="tlabel">开盘价格</div>
+      <div class="tval" id="openPrice">--</div>
+      <div class="tsub" id="openTime">今日开盘</div>
+    </div>
+    <div class="tcell">
+      <div class="tlabel">收盘价格</div>
+      <div class="tval pending" id="closePrice">等待收盘...</div>
+      <div class="tsub" id="closeSub">16:00 EST 更新</div>
+    </div>
+  </div>
+</div>
+
+<!-- 当日预测 -->
+<div class="day-card" id="dayCard">
+  <div class="card-title">当日走势预测（全天）</div>
+  <div class="pred-row">
+    <div>
+      <div class="pred-dir up" id="dayDir">分析中</div>
+    </div>
+    <div class="pred-right">
+      <div class="prob-lbl">置信度</div>
+      <div class="prob-big up" id="dayProb">--%</div>
+    </div>
+  </div>
+  <div class="bars">
+    <div class="bw">
+      <div class="bn">看涨</div>
+      <div class="bt"><div class="bf up" id="dayUpBar" style="width:50%"></div></div>
+      <div class="bp up" id="dayUpPct">50%</div>
+    </div>
+    <div class="bw">
+      <div class="bn">看跌</div>
+      <div class="bt"><div class="bf down" id="dayDownBar" style="width:50%"></div></div>
+      <div class="bp down" id="dayDownPct">50%</div>
+    </div>
+  </div>
+  <div class="reason" id="dayReason">正在获取数据...</div>
+</div>
+
+<!-- 小时预测时段 -->
+<div class="hour-section">
+  <div class="section-title">小时预测（按交易时段）</div>
+  <div class="hour-grid" id="hourGrid"></div>
+</div>
+
+<!-- 关键指标 -->
+<div class="metrics">
+  <div class="mc">
+    <div class="ml">日内涨跌幅</div>
+    <div class="mv" id="mChg">--</div>
+    <div class="ms" id="mChgSub">--</div>
+  </div>
+  <div class="mc">
+    <div class="ml">成交量</div>
+    <div class="mv" id="mVol">--</div>
+    <div class="ms" id="mVolSub">vs 均量</div>
+  </div>
+  <div class="mc">
+    <div class="ml">日内区间</div>
+    <div class="mv" id="mRange" style="font-size:16px">--</div>
+    <div class="ms" id="mRangeSub">--</div>
+  </div>
+  <div class="mc">
+    <div class="ml">综合评分</div>
+    <div class="mv" id="mScore">--</div>
+    <div class="ms">满分 ±10</div>
+  </div>
+</div>
+
+<!-- 日志 -->
+<div class="log">
+  <div class="log-title">// 更新记录</div>
+  <div id="logRows"></div>
+</div>
+
+<!-- 底部 -->
+<div class="footer">
+  <button class="btn" onclick="fetchAll()">立即刷新</button>
+  <div class="cd" id="cd">刷新: 60s</div>
+</div>
+<div class="disc">⚠ 股市有风险，预测仅供参考，不构成投资建议</div>
+
+<script>
+// ── 配置 ──
+const SYMBOL = 'TSLA';
+const AVG_VOL = 71590000; // 均量约7159万
+let cdSec = 60, cdTimer;
+let latestData = null;
+let hourSlots = []; // [{label, start, end, pred, prob, result}]
+let hourTimers = {};
+
+// ── 交易时段（EST，9:30-16:00，共6.5小时）──
+function getTradingSlots(today) {
+  // today: Date对象，取其年月日
+  const d = new Date(today);
+  const slots = [];
+  const times = [
+    [9,30],[10,30],[11,30],[12,30],[13,30],[14,30],[15,0]
+  ];
+  for (let i = 0; i < times.length - 1; i++) {
+    const start = new Date(d);
+    start.setHours(times[i][0], times[i][1], 0, 0);
+    const end = new Date(d);
+    end.setHours(times[i+1][0], times[i+1][1], 0, 0);
+    slots.push({
+      label: fmtSlot(start, end),
+      start, end,
+      pred: null, prob: null, result: null,
+      startPrice: null, endPrice: null
+    });
+  }
+  return slots;
+}
+
+function fmtSlot(s, e) {
+  return fmtHM(s) + '–' + fmtHM(e) + ' EST';
+}
+function fmtHM(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function fmtNow() {
+  return new Date().toLocaleTimeString('zh-CN');
+}
+
+// 判断当前是否在交易时间内
+function isMarketOpen(now) {
+  const h = now.getHours(), m = now.getMinutes();
+  // 简单判断（用户本地时间，不做时区转换，实际应按EST）
+  // 交易时间参考：美东 9:30-16:00
+  return true; // 实际由API数据决定
+}
+
+// ── 渲染小时槽 ──
+function renderHourGrid(price, score) {
+  const grid = document.getElementById('hourGrid');
+  const now = new Date();
+
+  // 初始化槽（第一次）
+  if (hourSlots.length === 0) {
+    hourSlots = getTradingSlots(now);
+  }
+
+  grid.innerHTML = '';
+  hourSlots.forEach((slot, idx) => {
+    const isActive = now >= slot.start && now < slot.end;
+    const isPast   = now >= slot.end;
+    const isFuture = now < slot.start;
+
+    // 如果是当前槽且还没有预测，生成预测
+    if (isActive && slot.pred === null && latestData) {
+      const { up, down, reasons } = calcHourPred(latestData, idx);
+      slot.pred = up >= down ? '▲ 看涨' : '▼ 看跌';
+      slot.predClass = up >= down ? 'up' : 'down';
+      slot.prob = up >= down ? up : down;
+      slot.startPrice = latestData.price;
+      scheduleHourEnd(slot, idx);
+    }
+
+    const div = document.createElement('div');
+    div.className = 'hour-slot' + (isActive ? ' active' : '') +
+      (isPast && slot.result !== null ? (slot.result >= 0 ? ' completed-up' : ' completed-down') : '');
+
+    let predHTML, resultHTML;
+
+    if (isFuture) {
+      predHTML = `<span class="hs-pred pending">待预测</span>`;
+      resultHTML = `<span class="hs-result pending">--</span>`;
+    } else if (isActive) {
+      predHTML = slot.pred
+        ? `<span class="hs-pred ${slot.predClass}">${slot.pred}</span>`
+        : `<span class="hs-pred pending">分析中</span>`;
+      resultHTML = `<span class="hs-result pending">进行中</span>`;
+    } else {
+      // 已过去
+      predHTML = slot.pred
+        ? `<span class="hs-pred ${slot.predClass}">${slot.pred}</span>`
+        : `<span class="hs-pred pending">--</span>`;
+      if (slot.result !== null) {
+        const pct = (slot.result / (slot.startPrice||1) * 100).toFixed(2);
+        const cls = slot.result >= 0 ? 'up' : 'down';
+        resultHTML = `<span class="hs-result ${cls}">${slot.result>=0?'+':''}${pct}%</span>`;
+      } else {
+        resultHTML = `<span class="hs-result pending">--</span>`;
+      }
+    }
+
+    div.innerHTML = `
+      <span class="hs-time">${slot.label}</span>
+      ${predHTML}
+      <span class="hs-prob">${slot.prob ? slot.prob+'%' : '--'}</span>
+      ${resultHTML}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function calcHourPred(data, slotIdx) {
+  const { price, open, high, low, change, changePct, volume, prevClose } = data;
+  let score = 0;
+  const reasons = [];
+
+  // 1. 日内动量
+  const intradayMom = ((price - open) / open * 100);
+  if (intradayMom > 1)      { score += 2; reasons.push('日内动量↑' + intradayMom.toFixed(2) + '%'); }
+  else if (intradayMom > 0) { score += 1; reasons.push('日内偏多'); }
+  else if (intradayMom < -1){ score -= 2; reasons.push('日内动量↓' + intradayMom.toFixed(2) + '%'); }
+  else                       { score -= 1; reasons.push('日内偏空'); }
+
+  // 2. 当日涨跌
+  if (changePct > 1)       { score += 2; reasons.push('当日涨' + changePct.toFixed(2) + '%'); }
+  else if (changePct > 0)  { score += 1; reasons.push('当日微涨'); }
+  else if (changePct < -1) { score -= 2; reasons.push('当日跌' + Math.abs(changePct).toFixed(2) + '%'); }
+  else                      { score -= 1; reasons.push('当日微跌'); }
+
+  // 3. 成交量
+  const volRatio = volume / AVG_VOL;
+  if (volRatio > 1.3 && changePct > 0) { score += 1; reasons.push('放量上涨'); }
+  if (volRatio > 1.3 && changePct < 0) { score -= 1; reasons.push('放量下跌'); }
+  if (volRatio < 0.7) reasons.push('成交量萎缩');
+
+  // 4. 距高低点位置
+  const range = high - low;
+  const posInRange = range > 0 ? (price - low) / range : 0.5;
+  if (posInRange > 0.7) { score += 1; reasons.push('价格靠近日高'); }
+  if (posInRange < 0.3) { score -= 1; reasons.push('价格靠近日低'); }
+
+  // 5. 时段因子（开盘/尾盘波动更大）
+  if (slotIdx === 0) reasons.push('开盘时段高波动');
+  if (slotIdx >= 5)  { score += (changePct > 0 ? 1 : -1); reasons.push('尾盘方向延续'); }
+
+  const up   = Math.min(Math.max(50 + score * 3, 38), 68);
+  const down = 100 - up;
+  return { up, down, score, reasons };
+}
+
+function scheduleHourEnd(slot, idx) {
+  clearTimeout(hourTimers[idx]);
+  const ms = slot.end - new Date();
+  if (ms <= 0) return;
+  hourTimers[idx] = setTimeout(async () => {
+    // 尝试获取当前价格作为终止价
+    const ep = await fetchCurrentPrice();
+    if (ep && slot.startPrice) {
+      slot.endPrice = ep;
+      slot.result = ep - slot.startPrice;
+    }
+    if (latestData) renderHourGrid(latestData.price, 0);
+  }, ms);
+}
+
+async function fetchCurrentPrice() {
+  // Yahoo Finance 非官方代理
+  const urls = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=1m&range=1d`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=1m&range=1d`,
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const d = await r.json();
+      const result = d?.chart?.result?.[0];
+      if (!result) continue;
+      const closes = result.indicators?.quote?.[0]?.close || [];
+      const last = closes.filter(Boolean).pop();
+      if (last) return last;
+    } catch(e) {}
+  }
+  return null;
+}
+
+// ── 主数据获取 ──
+async function fetchAll() {
+  setStatus('loading', '获取数据');
+  document.getElementById('errMsg').style.display = 'none';
+
+  const urls = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=5m&range=1d`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=5m&range=1d`,
+    `https://corsproxy.io/?url=https://query1.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=5m%26range=1d`,
+    `https://api.allorigins.win/raw?url=https://query1.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=5m%26range=1d`,
+  ];
+
+  let ok = false;
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      const d = await r.json();
+      processYahoo(d);
+      ok = true; break;
+    } catch(e) { console.warn(e.message); }
+  }
+
+  if (!ok) {
+    setStatus('err', '连接失败');
+    document.getElementById('errMsg').style.display = 'block';
+    document.getElementById('errMsg').textContent = '无法获取数据，请检查网络/VPN，或手动输入价格';
+    document.getElementById('manualWrap').style.display = 'flex';
+  }
+  resetCountdown();
+}
+
+function processYahoo(d) {
+  const result = d?.chart?.result?.[0];
+  if (!result) { setStatus('err', '数据异常'); return; }
+
+  const meta    = result.meta || {};
+  const quotes  = result.indicators?.quote?.[0] || {};
+  const closes  = (quotes.close  || []).filter(Boolean);
+  const opens   = (quotes.open   || []).filter(Boolean);
+  const highs   = (quotes.high   || []).filter(Boolean);
+  const lows    = (quotes.low    || []).filter(Boolean);
+  const vols    = (quotes.volume || []).filter(Boolean);
+
+  const price     = meta.regularMarketPrice || closes[closes.length-1] || 0;
+  const open      = meta.regularMarketOpen || opens[0] || price;
+  const high      = meta.regularMarketDayHigh || Math.max(...highs);
+  const low       = meta.regularMarketDayLow  || Math.min(...lows);
+  const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+  const volume    = meta.regularMarketVolume || vols.reduce((a,b)=>a+b,0);
+  const change    = price - prevClose;
+  const changePct = (change / prevClose * 100);
+  const mktState  = meta.marketState || 'CLOSED';
+
+  latestData = { price, open, high, low, prevClose, volume, change, changePct, mktState };
+
+  // ── 价格展示 ──
+  const pEl = document.getElementById('priceMain');
+  pEl.textContent = '$' + price.toFixed(2);
+  pEl.className = 'price-big ' + (change >= 0 ? 'up' : 'down');
+
+  const cEl = document.getElementById('priceChg');
+  cEl.textContent = (change >= 0 ? '▲ +' : '▼ ') + Math.abs(change).toFixed(2) +
+    ' (' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%)';
+  cEl.className = 'chg ' + (change >= 0 ? 'up' : 'down');
+  document.getElementById('priceTime').textContent = fmtNow();
+
+  const statEl = document.getElementById('mktStat');
+  const isOpen = mktState === 'REGULAR';
+  statEl.textContent = isOpen ? '交易中' : mktState === 'PRE' ? '盘前' : '已收盘';
+  statEl.className = 'mktstat' + (isOpen ? '' : ' closed');
+
+  // ── 开盘/收盘追踪 ──
+  document.getElementById('openPrice').textContent = '$' + open.toFixed(2);
+  document.getElementById('openTime').textContent = '今日开盘价';
+  if (!isOpen && mktState !== 'PRE') {
+    // 已收盘
+    const epEl = document.getElementById('closePrice');
+    epEl.textContent = '$' + price.toFixed(2);
+    const diff = price - open;
+    epEl.className = 'tval ' + (diff >= 0 ? 'up' : 'down');
+    document.getElementById('closeSub').textContent =
+      (diff >= 0 ? '▲ +' : '▼ ') + Math.abs(diff).toFixed(2) +
+      ' (' + (diff/open*100).toFixed(2) + '%)';
+  } else {
+    document.getElementById('closePrice').textContent = '等待收盘...';
+    document.getElementById('closePrice').className = 'tval pending';
+    document.getElementById('closeSub').textContent = '16:00 EST 更新';
+  }
+
+  // ── 指标 ──
+  const mChgEl = document.getElementById('mChg');
+  mChgEl.textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%';
+  mChgEl.className = 'mv ' + (changePct >= 0 ? 'up' : 'down');
+  document.getElementById('mChgSub').textContent = '较昨收盘';
+
+  const volRatio = volume / AVG_VOL;
+  document.getElementById('mVol').textContent = (volume/1e6).toFixed(1) + 'M';
+  document.getElementById('mVol').className = 'mv ' + (volRatio > 1.1 ? 'up' : volRatio < 0.9 ? 'down' : 'neutral');
+  document.getElementById('mVolSub').textContent = (volRatio * 100).toFixed(0) + '% 均量';
+
+  document.getElementById('mRange').textContent = '$' + low.toFixed(1) + ' – $' + high.toFixed(1);
+  document.getElementById('mRangeSub').textContent = '区间 $' + (high - low).toFixed(2);
+
+  // ── 全天预测 ──
+  const dayResult = calcDayPred(latestData);
+  updateDayPred(dayResult);
+
+  // ── 小时槽 ──
+  renderHourGrid(price, dayResult.score);
+
+  document.getElementById('mScore').textContent = (dayResult.score > 0 ? '+' : '') + dayResult.score;
+  document.getElementById('mScore').className = 'mv ' + (dayResult.score > 0 ? 'up' : dayResult.score < 0 ? 'down' : 'neutral');
+
+  setStatus('ok', 'Yahoo Finance');
+  addLog(price, changePct);
+}
+
+function calcDayPred(data) {
+  const { price, open, high, low, change, changePct, volume } = data;
+  let score = 0;
+  const reasons = [];
+
+  // 开盘缺口
+  const gapPct = ((open - (data.prevClose)) / data.prevClose * 100);
+  if (gapPct > 1)       { score += 2; reasons.push('高开' + gapPct.toFixed(1) + '%'); }
+  else if (gapPct > 0)  { score += 1; reasons.push('小幅高开'); }
+  else if (gapPct < -1) { score -= 2; reasons.push('低开' + Math.abs(gapPct).toFixed(1) + '%'); }
+  else                   { score -= 1; reasons.push('小幅低开'); }
+
+  // 当日涨跌
+  if (changePct > 2)       { score += 3; reasons.push('强势上涨+' + changePct.toFixed(1) + '%'); }
+  else if (changePct > 0.5){ score += 2; reasons.push('稳步上涨'); }
+  else if (changePct > 0)  { score += 1; reasons.push('微幅上涨'); }
+  else if (changePct < -2) { score -= 3; reasons.push('大幅下跌' + changePct.toFixed(1) + '%'); }
+  else if (changePct < -0.5){ score -= 2; reasons.push('持续下跌'); }
+  else                      { score -= 1; reasons.push('微幅下跌'); }
+
+  // 成交量
+  const volRatio = volume / AVG_VOL;
+  if (volRatio > 1.5 && changePct > 0) { score += 2; reasons.push('放量大涨'); }
+  if (volRatio > 1.5 && changePct < 0) { score -= 2; reasons.push('放量大跌'); }
+  if (volRatio > 1.1 && changePct > 0) { score += 1; reasons.push('成交量配合上行'); }
+
+  // 日内位置
+  const range = high - low;
+  const pos = range > 0 ? (price - low) / range : 0.5;
+  if (pos > 0.75) { score += 1; reasons.push('运行在日内高位'); }
+  if (pos < 0.25) { score -= 1; reasons.push('运行在日内低位'); }
+
+  const up = Math.min(Math.max(50 + score * 3, 35), 70);
+  const down = 100 - up;
+  return { up, down, score, reasons };
+}
+
+function updateDayPred({ up, down, score, reasons }) {
+  const isUp = up >= down;
+  const dir = isUp ? '▲ 看涨' : '▼ 看跌';
+  const cls = isUp ? 'up' : 'down';
+  const prob = isUp ? up : down;
+
+  document.getElementById('dayDir').textContent = dir;
+  document.getElementById('dayDir').className = 'pred-dir ' + cls;
+  document.getElementById('dayCard').className = 'day-card ' + (isUp ? 'up' : 'down') + '-card';
+  document.getElementById('dayProb').textContent = prob + '%';
+  document.getElementById('dayProb').className = 'prob-big ' + cls;
+  document.getElementById('dayUpBar').style.width = up + '%';
+  document.getElementById('dayDownBar').style.width = down + '%';
+  document.getElementById('dayUpPct').textContent = up + '%';
+  document.getElementById('dayDownPct').textContent = down + '%';
+  document.getElementById('dayReason').textContent = reasons.join(' · ');
+}
+
+function useManual() {
+  const val = parseFloat(document.getElementById('manualPrice').value);
+  if (!val || val < 10) return alert('请输入有效价格');
+
+  // 用已知的TSLA数据补全（基于最新搜索数据：4月25日）
+  // 今日区间 370.73–382.76，昨收 373.72，成交量约6289万
+  const knownOpen     = 373.72;
+  const knownPrevClose= 373.72;
+  const knownHigh     = Math.max(val, 382.76);
+  const knownLow      = Math.min(val, 370.73);
+  const knownVol      = 62890000;
+  const change    = val - knownPrevClose;
+  const changePct = (change / knownPrevClose * 100);
+
+  latestData = {
+    price: val,
+    open: knownOpen,
+    high: knownHigh,
+    low: knownLow,
+    prevClose: knownPrevClose,
+    volume: knownVol,
+    change,
+    changePct,
+    mktState: 'CLOSED'
+  };
+
+  // 更新价格显示
+  const pEl = document.getElementById('priceMain');
+  pEl.textContent = '$' + val.toFixed(2);
+  pEl.className = 'price-big ' + (change >= 0 ? 'up' : 'down');
+
+  const cEl = document.getElementById('priceChg');
+  cEl.textContent = (change >= 0 ? '▲ +' : '▼ ') + Math.abs(change).toFixed(2) +
+    ' (' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%)';
+  cEl.className = 'chg ' + (change >= 0 ? 'up' : 'down');
+  document.getElementById('priceTime').textContent = '手动 · ' + fmtNow();
+  document.getElementById('mktStat').textContent = '已收盘';
+  document.getElementById('mktStat').className = 'mktstat closed';
+
+  document.getElementById('openPrice').textContent = '$' + knownOpen.toFixed(2);
+  document.getElementById('closePrice').textContent = '$' + val.toFixed(2);
+  document.getElementById('closePrice').className = 'tval ' + (change >= 0 ? 'up' : 'down');
+  document.getElementById('closeSub').textContent =
+    (change >= 0 ? '▲ +' : '▼ ') + Math.abs(change).toFixed(2) +
+    ' (' + changePct.toFixed(2) + '%)';
+
+  document.getElementById('mChg').textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%';
+  document.getElementById('mChg').className = 'mv ' + (changePct >= 0 ? 'up' : 'down');
+  document.getElementById('mChgSub').textContent = '较昨收盘';
+
+  const volRatio = knownVol / AVG_VOL;
+  document.getElementById('mVol').textContent = (knownVol/1e6).toFixed(1) + 'M';
+  document.getElementById('mVol').className = 'mv ' + (volRatio > 1.1 ? 'up' : 'down');
+  document.getElementById('mVolSub').textContent = (volRatio * 100).toFixed(0) + '% 均量';
+
+  document.getElementById('mRange').textContent = '$' + knownLow.toFixed(1) + ' – $' + knownHigh.toFixed(1);
+  document.getElementById('mRangeSub').textContent = '区间 $' + (knownHigh - knownLow).toFixed(2);
+
+  // 触发完整预测
+  const dayResult = calcDayPred(latestData);
+  updateDayPred(dayResult);
+  renderHourGrid(val, dayResult.score);
+
+  document.getElementById('mScore').textContent = (dayResult.score > 0 ? '+' : '') + dayResult.score;
+  document.getElementById('mScore').className = 'mv ' + (dayResult.score > 0 ? 'up' : dayResult.score < 0 ? 'down' : 'neutral');
+
+  setStatus('ok', '手动模式');
+  document.getElementById('errMsg').style.display = 'none';
+  addLog(val, changePct);
+}
+
+function addLog(price, chgPct) {
+  const time = fmtNow();
+  const row = document.createElement('div');
+  row.className = 'lr';
+  const cls = chgPct >= 0 ? 'up' : 'down';
+  row.innerHTML = `
+    <span class="lt">${time}</span>
+    <span class="lp">$${price.toFixed(2)}</span>
+    <span class="ld ${cls}">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</span>
+    <span class="lpr">TSLA</span>`;
+  const log = document.getElementById('logRows');
+  log.insertBefore(row, log.firstChild);
+  if (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+function setStatus(state, text) {
+  document.getElementById('led').className = 'led ' + (state==='ok'?'ok':state==='loading'?'loading':'err');
+  document.getElementById('statusText').textContent = text;
+}
+
+function resetCountdown() {
+  clearInterval(cdTimer);
+  cdSec = 60;
+  cdTimer = setInterval(() => {
+    cdSec--;
+    document.getElementById('cd').textContent = '刷新: ' + cdSec + 's';
+    if (cdSec <= 0) fetchAll();
+  }, 1000);
+}
+
+// 每秒更新小时槽进行中状态
+setInterval(() => {
+  if (latestData) renderHourGrid(latestData.price, 0);
+}, 30000);
+
+fetchAll();
+</script>
+</body>
+</html>
