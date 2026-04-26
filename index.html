@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TSLA预测">
@@ -10,350 +10,134 @@
 <title>TSLA · 走势预测</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
-:root {
-  --bg: #04070a;
-  --card: #0b1017;
-  --card2: #111a22;
-  --border: #1c2b38;
-  --red: #e31937;
-  --green: #16c784;
-  --yellow: #f5a623;
-  --blue: #4da6ff;
-  --text: #d8e4ee;
-  --muted: #3d5870;
-  --sat: env(safe-area-inset-top, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: var(--bg); }
-
-body {
-  font-family: 'Space Grotesk', sans-serif;
-  color: var(--text);
-  padding: calc(var(--sat) + 14px) 14px calc(var(--sab) + 14px);
-  min-height: 100vh;
-  background-image:
-    radial-gradient(ellipse at 0 0, rgba(227,25,55,.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 100%, rgba(77,166,255,.05) 0%, transparent 50%);
-}
-
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
-@keyframes slide-up { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-@keyframes shimmer { 0%{opacity:.4} 50%{opacity:.8} 100%{opacity:.4} }
-
-/* ── HEADER ── */
-.hdr {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
-}
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-logo {
-  font-family: 'Space Mono', monospace;
-  font-size: 22px; font-weight: 700;
-  color: var(--red); letter-spacing: 2px;
-}
-.brand-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-.pill {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 999px; padding: 6px 12px;
-  font-size: 10px; color: var(--muted);
-  font-family: 'Space Mono', monospace;
-}
-.led { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-.led.ok { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
-.led.spin { background: var(--yellow); animation: blink .3s infinite; }
-.led.err { background: var(--red); }
-
-/* ── PRICE HERO ── */
-.price-hero {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 18px 16px 14px;
-  margin-bottom: 12px;
-  animation: slide-up .4s ease;
-  position: relative; overflow: hidden;
-}
-.price-hero::after {
-  content: 'TSLA';
-  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
-  font-family: 'Space Mono', monospace;
-  font-size: 72px; font-weight: 700;
-  color: rgba(227,25,55,.05);
-  letter-spacing: 6px; pointer-events: none;
-}
-.price-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.price-lbl { font-size: 10px; color: var(--muted); letter-spacing: 2px; margin-bottom: 4px; font-family: 'Space Mono', monospace; }
-.price-num {
-  font-family: 'Space Mono', monospace;
-  font-size: 46px; font-weight: 700; line-height: 1;
-  color: var(--text); transition: color .3s;
-}
-.price-num.up { color: var(--green); }
-.price-num.dn { color: var(--red); }
-.price-right { text-align: right; }
-.price-chg { font-size: 17px; font-weight: 700; margin-bottom: 4px; font-family: 'Space Mono', monospace; }
-.price-chg.up { color: var(--green); }
-.price-chg.dn { color: var(--red); }
-.price-ts { font-size: 10px; color: var(--muted); }
-.mkt-badge {
-  display: inline-block; font-size: 9px; letter-spacing: 1px;
-  padding: 2px 8px; border-radius: 4px; margin-top: 4px;
-  font-family: 'Space Mono', monospace;
-}
-.mkt-badge.open { background: rgba(22,199,132,.12); color: var(--green); border: 1px solid rgba(22,199,132,.2); }
-.mkt-badge.closed { background: rgba(61,88,112,.15); color: var(--muted); border: 1px solid var(--border); }
-.mkt-badge.pre { background: rgba(245,166,35,.1); color: var(--yellow); border: 1px solid rgba(245,166,35,.2); }
-
-/* open/close track */
-.oc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
-.oc-cell .oc-lbl { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 4px; font-family: 'Space Mono', monospace; }
-.oc-cell .oc-val { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; color: var(--text); }
-.oc-cell .oc-val.up { color: var(--green); }
-.oc-cell .oc-val.dn { color: var(--red); }
-.oc-cell .oc-val.dim { color: var(--muted); font-size: 13px; }
-.oc-cell .oc-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
-
-/* ── DAY PREDICTION ── */
-.day-pred {
-  border-radius: 16px; padding: 16px;
-  margin-bottom: 12px; border: 1px solid var(--border);
-  background: var(--card); position: relative; overflow: hidden;
-  transition: border-color .4s, background .4s;
-}
-.day-pred.bullish {
-  border-color: rgba(22,199,132,.4);
-  background: linear-gradient(145deg, #081a10 0%, var(--card) 60%);
-}
-.day-pred.bearish {
-  border-color: rgba(227,25,55,.4);
-  background: linear-gradient(145deg, #1a0508 0%, var(--card) 60%);
-}
-.day-pred::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  transition: background .4s;
-}
-.day-pred.bullish::before { background: linear-gradient(90deg, var(--green), transparent); }
-.day-pred.bearish::before { background: linear-gradient(90deg, var(--red), transparent); }
-
-.sec-lbl { font-size: 9px; color: var(--muted); letter-spacing: 3px; font-family: 'Space Mono', monospace; margin-bottom: 10px; text-transform: uppercase; }
-
-.pred-main { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-.pred-dir { font-family: 'Space Mono', monospace; font-size: 38px; font-weight: 700; line-height: 1; }
-.pred-dir.up { color: var(--green); }
-.pred-dir.dn { color: var(--red); }
-.pred-r { text-align: right; }
-.conf-lbl { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 2px; font-family: 'Space Mono', monospace; }
-.conf-num { font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700; }
-.conf-num.up { color: var(--green); }
-.conf-num.dn { color: var(--red); }
-
-.bars { display: flex; gap: 8px; margin-bottom: 10px; }
-.bar-w { flex: 1; }
-.bar-n { font-size: 9px; color: var(--muted); margin-bottom: 4px; }
-.bar-t { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.bar-f { height: 100%; border-radius: 3px; transition: width .8s ease; }
-.bar-f.up { background: var(--green); }
-.bar-f.dn { background: var(--red); }
-.bar-p { font-size: 11px; font-weight: 600; margin-top: 3px; }
-.bar-p.up { color: var(--green); }
-.bar-p.dn { color: var(--red); }
-
-.signals {
-  display: flex; flex-wrap: wrap; gap: 5px;
-  padding-top: 10px; border-top: 1px solid var(--border);
-}
-.sig-tag {
-  font-size: 9px; padding: 3px 8px; border-radius: 4px;
-  font-family: 'Space Mono', monospace; letter-spacing: .5px;
-}
-.sig-tag.bull { background: rgba(22,199,132,.1); color: var(--green); border: 1px solid rgba(22,199,132,.2); }
-.sig-tag.bear { background: rgba(227,25,55,.1); color: var(--red); border: 1px solid rgba(227,25,55,.2); }
-.sig-tag.neutral { background: rgba(77,166,255,.08); color: var(--blue); border: 1px solid rgba(77,166,255,.15); }
-
-/* ── HOURLY GRID ── */
-.hour-section { margin-bottom: 12px; }
-.sec-hdr {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 8px;
-}
-.sec-hdr-lbl { font-size: 9px; color: var(--muted); letter-spacing: 3px; font-family: 'Space Mono', monospace; text-transform: uppercase; white-space: nowrap; }
-.sec-hdr-line { flex: 1; height: 1px; background: var(--border); }
-
-.hour-list { display: flex; flex-direction: column; gap: 7px; }
-.hslot {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 11px 14px;
-  display: grid; grid-template-columns: 100px 1fr auto auto;
-  align-items: center; gap: 8px;
-  transition: border-color .3s, background .3s;
-}
-.hslot.active {
-  border-color: rgba(245,166,35,.5);
-  background: linear-gradient(90deg, rgba(245,166,35,.04), var(--card));
-}
-.hslot.hit-up { border-color: rgba(22,199,132,.3); }
-.hslot.hit-dn { border-color: rgba(227,25,55,.3); }
-
-.hs-time { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--muted); }
-.hs-time.active { color: var(--yellow); }
-
-.hs-pred { font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700; }
-.hs-pred.up { color: var(--green); }
-.hs-pred.dn { color: var(--red); }
-.hs-pred.wait { color: var(--muted); font-size: 11px; animation: shimmer 2s infinite; }
-
-.hs-conf { font-size: 10px; color: var(--muted); text-align: right; font-family: 'Space Mono', monospace; }
-
-.hs-result { font-size: 11px; font-weight: 700; text-align: right; min-width: 48px; font-family: 'Space Mono', monospace; }
-.hs-result.up { color: var(--green); }
-.hs-result.dn { color: var(--red); }
-.hs-result.live { color: var(--yellow); font-size: 10px; }
-.hs-result.wait { color: var(--muted); }
-
-/* ── METRICS ── */
-.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.met {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px 14px;
-}
-.met-lbl { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 6px; font-family: 'Space Mono', monospace; }
-.met-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; line-height: 1; }
-.met-val.up { color: var(--green); }
-.met-val.dn { color: var(--red); }
-.met-val.neutral { color: var(--blue); }
-.met-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
-
-/* ── LOG ── */
-.log {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px; margin-bottom: 12px;
-  max-height: 150px; overflow-y: auto; -webkit-overflow-scrolling: touch;
-}
-.log-hdr { font-size: 9px; color: var(--muted); letter-spacing: 3px; font-family: 'Space Mono', monospace; margin-bottom: 8px; }
-.log-row {
-  display: flex; gap: 8px; padding: 5px 0;
-  border-bottom: 1px solid var(--border); font-size: 10px;
-  font-family: 'Space Mono', monospace; align-items: center;
-}
-.log-row:last-child { border-bottom: none; }
-.lr-t { color: var(--muted); min-width: 54px; }
-.lr-p { color: var(--yellow); min-width: 60px; }
-.lr-c { font-weight: 700; flex: 1; }
-.lr-v { color: var(--muted); font-size: 9px; }
-
-/* ── PRICE RANGE ── */
-.range-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-.range-title { font-size: 9px; color: var(--muted); letter-spacing: 3px; font-family: 'Space Mono', monospace; margin-bottom: 14px; }
-
-.range-nums {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px;
-}
-.range-low, .range-high {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-}
-.range-side-lbl { font-size: 9px; letter-spacing: 2px; color: var(--muted); font-family: 'Space Mono', monospace; }
-.range-price {
-  font-family: 'Space Mono', monospace;
-  font-size: 30px; font-weight: 700; line-height: 1;
-}
-.range-price.low { color: var(--red); }
-.range-price.high { color: var(--green); }
-.range-divider {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 0 8px;
-}
-.range-arrow { font-size: 22px; color: var(--muted); }
-.range-mid-lbl { font-size: 9px; color: var(--muted); }
-.range-mid-val { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text); }
-
-/* 区间可视化条 */
-.range-bar-wrap { position: relative; margin-bottom: 10px; }
-.range-track {
-  height: 8px; background: var(--border); border-radius: 4px;
-  position: relative; overflow: visible;
-}
-.range-fill {
-  position: absolute; top: 0; height: 100%; border-radius: 4px;
-  background: linear-gradient(90deg, var(--red), var(--green));
-  transition: left .6s ease, right .6s ease;
-}
-.range-dot {
-  position: absolute; top: 50%; transform: translate(-50%, -50%);
-  width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; border: 2px solid var(--yellow);
-  box-shadow: 0 0 8px rgba(245,166,35,.6);
-  transition: left .6s ease;
-  z-index: 2;
-}
-.range-labels {
-  display: flex; justify-content: space-between;
-  font-size: 9px; color: var(--muted); font-family: 'Space Mono', monospace;
-  margin-top: 5px;
-}
-
-/* 波动预测 */
-.range-stats {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);
-}
-.rs-cell { text-align: center; }
-.rs-lbl { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 3px; font-family: 'Space Mono', monospace; }
-.rs-val { font-family: 'Space Mono', monospace; font-size: 15px; font-weight: 700; }
-.rs-val.up { color: var(--green); }
-.rs-val.dn { color: var(--red); }
-.rs-val.neutral { color: var(--blue); }
-
-/* ── FOOTER ── */
-.footer { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-.btn {
-  flex: 1; background: transparent; border: 1px solid var(--red);
-  color: var(--red); padding: 12px; border-radius: 10px;
-  font-family: 'Space Grotesk', sans-serif; font-size: 12px;
-  font-weight: 600; letter-spacing: 1px; cursor: pointer;
-  transition: all .2s;
-}
-.btn:active { background: var(--red); color: #fff; transform: scale(.97); }
-.cd-txt { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; min-width: 72px; text-align: right; }
-.disc { text-align: center; font-size: 9px; color: var(--muted); padding-bottom: 2px; }
-
-/* ── ERROR / MANUAL ── */
-.err-box {
-  display: none; background: rgba(227,25,55,.07); border: 1px solid rgba(227,25,55,.2);
-  border-radius: 10px; padding: 10px 14px; font-size: 11px; color: #f87171; margin-bottom: 10px;
-}
-.manual-row { display: none; gap: 8px; margin-bottom: 10px; }
-.manual-row input {
-  flex: 1; background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; color: var(--text); padding: 10px 14px;
-  font-family: 'Space Mono', monospace; font-size: 15px; outline: none;
-}
-.manual-row input:focus { border-color: var(--red); }
-.manual-row input::placeholder { color: var(--muted); font-size: 12px; }
-
-.up { color: var(--green); }
-.dn { color: var(--red); }
+:root{--bg:#04070a;--card:#0b1017;--card2:#111a22;--border:#1c2b38;--red:#e31937;--green:#16c784;--yellow:#f5a623;--blue:#4da6ff;--text:#d8e4ee;--muted:#3d5870;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg)}
+body{font-family:'Space Grotesk',sans-serif;color:var(--text);padding:calc(var(--sat) + 14px) 14px calc(var(--sab) + 14px);min-height:100vh;background-image:radial-gradient(ellipse at 0 0,rgba(227,25,55,.08) 0%,transparent 50%),radial-gradient(ellipse at 100% 100%,rgba(77,166,255,.05) 0%,transparent 50%)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+@keyframes slide-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{opacity:.4}50%{opacity:.9}100%{opacity:.4}}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.brand-logo{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--red);letter-spacing:2px}
+.brand-sub{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.pill{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+.led{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.led.ok{background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s infinite}
+.led.spin{background:var(--yellow);animation:blink .3s infinite}
+.led.err{background:var(--red)}
+.err-box{display:none;background:rgba(227,25,55,.07);border:1px solid rgba(227,25,55,.2);border-radius:10px;padding:10px 14px;font-size:11px;color:#f87171;margin-bottom:10px}
+.manual-row{display:none;gap:8px;margin-bottom:10px}
+.manual-row input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 14px;font-family:'Space Mono',monospace;font-size:15px;outline:none}
+.manual-row input:focus{border-color:var(--red)}
+.manual-row input::placeholder{color:var(--muted);font-size:12px}
+.price-hero{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 16px 14px;margin-bottom:12px;animation:slide-up .4s ease;position:relative;overflow:hidden}
+.price-hero::after{content:'TSLA';position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:72px;font-weight:700;color:rgba(227,25,55,.05);letter-spacing:6px;pointer-events:none}
+.price-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.price-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;font-family:'Space Mono',monospace}
+.price-num{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;line-height:1;color:var(--text);transition:color .3s}
+.price-num.up{color:var(--green)}.price-num.dn{color:var(--red)}
+.price-right{text-align:right}
+.price-chg{font-size:17px;font-weight:700;margin-bottom:4px;font-family:'Space Mono',monospace}
+.price-chg.up{color:var(--green)}.price-chg.dn{color:var(--red)}
+.price-ts{font-size:10px;color:var(--muted)}
+.mkt-badge{display:inline-block;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;margin-top:4px;font-family:'Space Mono',monospace}
+.mkt-badge.open{background:rgba(22,199,132,.12);color:var(--green);border:1px solid rgba(22,199,132,.2)}
+.mkt-badge.closed{background:rgba(61,88,112,.15);color:var(--muted);border:1px solid var(--border)}
+.mkt-badge.pre{background:rgba(245,166,35,.1);color:var(--yellow);border:1px solid rgba(245,166,35,.2)}
+.oc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:14px;border-top:1px solid var(--border)}
+.oc-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;font-family:'Space Mono',monospace}
+.oc-val{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--text)}
+.oc-val.up{color:var(--green)}.oc-val.dn{color:var(--red)}.oc-val.dim{color:var(--muted);font-size:13px}
+.oc-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.day-pred{border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--border);background:var(--card);position:relative;overflow:hidden;transition:border-color .4s,background .4s}
+.day-pred.bullish{border-color:rgba(22,199,132,.4);background:linear-gradient(145deg,#081a10 0%,var(--card) 60%)}
+.day-pred.bearish{border-color:rgba(227,25,55,.4);background:linear-gradient(145deg,#1a0508 0%,var(--card) 60%)}
+.day-pred::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;transition:background .4s}
+.day-pred.bullish::before{background:linear-gradient(90deg,var(--green),transparent)}
+.day-pred.bearish::before{background:linear-gradient(90deg,var(--red),transparent)}
+.sec-lbl{font-size:9px;color:var(--muted);letter-spacing:3px;font-family:'Space Mono',monospace;margin-bottom:10px;text-transform:uppercase}
+.pred-main{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.pred-dir{font-family:'Space Mono',monospace;font-size:38px;font-weight:700;line-height:1}
+.pred-dir.up{color:var(--green)}.pred-dir.dn{color:var(--red)}
+.pred-r{text-align:right}
+.conf-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:2px;font-family:'Space Mono',monospace}
+.conf-num{font-family:'Space Mono',monospace;font-size:28px;font-weight:700}
+.conf-num.up{color:var(--green)}.conf-num.dn{color:var(--red)}
+.bars{display:flex;gap:8px;margin-bottom:10px}
+.bar-w{flex:1}
+.bar-n{font-size:9px;color:var(--muted);margin-bottom:4px}
+.bar-t{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-f{height:100%;border-radius:3px;transition:width .8s ease}
+.bar-f.up{background:var(--green)}.bar-f.dn{background:var(--red)}
+.bar-p{font-size:11px;font-weight:600;margin-top:3px}
+.bar-p.up{color:var(--green)}.bar-p.dn{color:var(--red)}
+.signals{display:flex;flex-wrap:wrap;gap:5px;padding-top:10px;border-top:1px solid var(--border)}
+.sig-tag{font-size:9px;padding:3px 8px;border-radius:4px;font-family:'Space Mono',monospace}
+.sig-tag.bull{background:rgba(22,199,132,.1);color:var(--green);border:1px solid rgba(22,199,132,.2)}
+.sig-tag.bear{background:rgba(227,25,55,.1);color:var(--red);border:1px solid rgba(227,25,55,.2)}
+.sig-tag.neutral{background:rgba(77,166,255,.08);color:var(--blue);border:1px solid rgba(77,166,255,.15)}
+.range-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+.range-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.range-side{text-align:center;flex:1}
+.range-side-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;font-family:'Space Mono',monospace;margin-bottom:6px}
+.range-price{font-family:'Space Mono',monospace;font-size:34px;font-weight:700;line-height:1}
+.range-price.lo{color:var(--red)}.range-price.hi{color:var(--green)}
+.range-side-pct{font-family:'Space Mono',monospace;font-size:12px;margin-top:5px}
+.range-side-pct.lo{color:var(--red)}.range-side-pct.hi{color:var(--green)}
+.range-mid{text-align:center;padding:0 8px;flex-shrink:0}
+.range-arrow{font-size:22px;color:var(--muted);line-height:1;margin-bottom:4px}
+.range-cur-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;font-family:'Space Mono',monospace}
+.range-cur-val{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--yellow);margin-top:3px}
+.range-bar-wrap{margin-bottom:12px}
+.range-track{height:10px;background:var(--border);border-radius:5px;position:relative}
+.range-fill{position:absolute;top:0;left:0;right:0;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--red),rgba(245,166,35,.5),var(--green))}
+.range-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--yellow);box-shadow:0 0 10px rgba(245,166,35,.7);transition:left .6s ease;z-index:2}
+.range-bar-lbls{display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace}
+.range-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:12px;border-top:1px solid var(--border)}
+.rs-cell{text-align:center;background:var(--card2);border-radius:8px;padding:10px 6px}
+.rs-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;font-family:'Space Mono',monospace;margin-bottom:5px}
+.rs-val{font-family:'Space Mono',monospace;font-size:16px;font-weight:700}
+.rs-val.up{color:var(--green)}.rs-val.dn{color:var(--red)}.rs-val.neutral{color:var(--blue)}
+.hour-section{margin-bottom:12px}
+.sec-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sec-hdr-lbl{font-size:9px;color:var(--muted);letter-spacing:3px;font-family:'Space Mono',monospace;text-transform:uppercase;white-space:nowrap}
+.sec-hdr-line{flex:1;height:1px;background:var(--border)}
+.hour-list{display:flex;flex-direction:column;gap:7px}
+.hslot{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 14px;display:grid;grid-template-columns:100px 1fr auto auto;align-items:center;gap:8px;transition:border-color .3s,background .3s}
+.hslot.active{border-color:rgba(245,166,35,.5);background:linear-gradient(90deg,rgba(245,166,35,.04),var(--card))}
+.hslot.hit-up{border-color:rgba(22,199,132,.3)}.hslot.hit-dn{border-color:rgba(227,25,55,.3)}
+.hs-time{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--muted)}
+.hs-time.active{color:var(--yellow)}
+.hs-pred{font-family:'Space Mono',monospace;font-size:14px;font-weight:700}
+.hs-pred.up{color:var(--green)}.hs-pred.dn{color:var(--red)}.hs-pred.wait{color:var(--muted);font-size:11px;animation:shimmer 2s infinite}
+.hs-conf{font-size:10px;color:var(--muted);text-align:right;font-family:'Space Mono',monospace}
+.hs-result{font-size:11px;font-weight:700;text-align:right;min-width:48px;font-family:'Space Mono',monospace}
+.hs-result.up{color:var(--green)}.hs-result.dn{color:var(--red)}.hs-result.live{color:var(--yellow);font-size:10px}.hs-result.wait{color:var(--muted)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.met{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.met-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;font-family:'Space Mono',monospace}
+.met-val{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;line-height:1}
+.met-val.up{color:var(--green)}.met-val.dn{color:var(--red)}.met-val.neutral{color:var(--blue)}
+.met-sub{font-size:10px;color:var(--muted);margin-top:4px}
+.log{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;max-height:150px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.log-hdr{font-size:9px;color:var(--muted);letter-spacing:3px;font-family:'Space Mono',monospace;margin-bottom:8px}
+.log-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:10px;font-family:'Space Mono',monospace;align-items:center}
+.log-row:last-child{border-bottom:none}
+.lr-t{color:var(--muted);min-width:54px}.lr-p{color:var(--yellow);min-width:60px}.lr-c{font-weight:700;flex:1}.lr-v{color:var(--muted);font-size:9px}
+.footer{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.btn{flex:1;background:transparent;border:1px solid var(--red);color:var(--red);padding:12px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .2s}
+.btn:active{background:var(--red);color:#fff;transform:scale(.97)}
+.cd-txt{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;min-width:72px;text-align:right}
+.disc{text-align:center;font-size:9px;color:var(--muted);padding-bottom:2px}
+.up{color:var(--green)}.dn{color:var(--red)}
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="hdr">
-  <div class="brand">
-    <div>
-      <div class="brand-logo">TSLA</div>
-      <div class="brand-sub">走势预测 · 日线 + 小时</div>
-    </div>
+  <div>
+    <div class="brand-logo">TSLA</div>
+    <div class="brand-sub">走势预测 · 日线 + 小时</div>
   </div>
   <div class="pill">
     <div class="led" id="led"></div>
@@ -363,11 +147,10 @@ body {
 
 <div class="err-box" id="errBox"></div>
 <div class="manual-row" id="manualRow">
-  <input type="number" id="manualInput" placeholder="输入当前TSLA价格，如 376.30" inputmode="decimal" step="0.01"/>
+  <input type="number" id="manualInput" placeholder="输入当前TSLA价格 如 376.30" inputmode="decimal" step="0.01"/>
   <button class="btn" style="flex:0;padding:10px 16px;white-space:nowrap" onclick="submitManual()">确认</button>
 </div>
 
-<!-- 价格 -->
 <div class="price-hero">
   <div class="price-top">
     <div>
@@ -381,12 +164,12 @@ body {
     </div>
   </div>
   <div class="oc-row">
-    <div class="oc-cell">
+    <div>
       <div class="oc-lbl">开盘价格</div>
       <div class="oc-val" id="openVal">--</div>
-      <div class="oc-sub" id="openSub">今日开盘</div>
+      <div class="oc-sub">今日开盘</div>
     </div>
-    <div class="oc-cell">
+    <div>
       <div class="oc-lbl">收盘价格</div>
       <div class="oc-val dim" id="closeVal">等待收盘</div>
       <div class="oc-sub" id="closeSub">16:00 EST 更新</div>
@@ -394,11 +177,10 @@ body {
   </div>
 </div>
 
-<!-- 全天预测 -->
 <div class="day-pred" id="dayPred">
   <div class="sec-lbl">当日走势预测（全天）</div>
   <div class="pred-main">
-    <div class="pred-dir up" id="dayDir">分析中...</div>
+    <div class="pred-dir up" id="dayDir">分析中</div>
     <div class="pred-r">
       <div class="conf-lbl">置信度</div>
       <div class="conf-num up" id="dayConf">--%</div>
@@ -419,41 +201,36 @@ body {
   <div class="signals" id="sigTags"></div>
 </div>
 
-<!-- 日内价格区间预测 -->
 <div class="range-card">
-  <div class="range-title">当日预测价格区间</div>
-  <div class="range-nums">
-    <div class="range-low">
+  <div class="sec-lbl">当日预测价格区间</div>
+  <div class="range-top">
+    <div class="range-side">
       <div class="range-side-lbl">预测低点</div>
-      <div class="range-price low" id="rangeLow">---</div>
-      <div class="range-side-lbl" id="rangeLowPct">--</div>
+      <div class="range-price lo" id="rangeLow">---</div>
+      <div class="range-side-pct lo" id="rangeLowPct">--</div>
     </div>
-    <div class="range-divider">
+    <div class="range-mid">
       <div class="range-arrow">↔</div>
-      <div class="range-mid-lbl">当前价</div>
-      <div class="range-mid-val" id="rangeCur">---</div>
+      <div class="range-cur-lbl">当前价格</div>
+      <div class="range-cur-val" id="rangeCur">---</div>
     </div>
-    <div class="range-high">
+    <div class="range-side">
       <div class="range-side-lbl">预测高点</div>
-      <div class="range-price high" id="rangeHigh">---</div>
-      <div class="range-side-lbl" id="rangeHighPct">--</div>
+      <div class="range-price hi" id="rangeHigh">---</div>
+      <div class="range-side-pct hi" id="rangeHighPct">--</div>
     </div>
   </div>
-
-  <!-- 可视化条 -->
   <div class="range-bar-wrap">
     <div class="range-track">
-      <div class="range-fill" id="rangeFill" style="left:10%;right:10%"></div>
+      <div class="range-fill"></div>
       <div class="range-dot" id="rangeDot" style="left:50%"></div>
     </div>
-    <div class="range-labels">
+    <div class="range-bar-lbls">
       <span id="rangeLowLbl">--</span>
-      <span style="color:var(--yellow)">▲ 当前价</span>
+      <span style="color:var(--yellow)">● 当前</span>
       <span id="rangeHighLbl">--</span>
     </div>
   </div>
-
-  <!-- 统计 -->
   <div class="range-stats">
     <div class="rs-cell">
       <div class="rs-lbl">预测振幅</div>
@@ -470,7 +247,6 @@ body {
   </div>
 </div>
 
-<!-- 小时预测 -->
 <div class="hour-section">
   <div class="sec-hdr">
     <div class="sec-hdr-lbl">小时预测（交易时段）</div>
@@ -479,7 +255,6 @@ body {
   <div class="hour-list" id="hourList"></div>
 </div>
 
-<!-- 关键指标 -->
 <div class="metrics">
   <div class="met">
     <div class="met-lbl">日内涨跌</div>
@@ -503,13 +278,11 @@ body {
   </div>
 </div>
 
-<!-- 日志 -->
 <div class="log">
   <div class="log-hdr">// 刷新记录</div>
   <div id="logList"></div>
 </div>
 
-<!-- Footer -->
 <div class="footer">
   <button class="btn" onclick="fetchData()">立即刷新</button>
   <div class="cd-txt" id="cdTxt">刷新: 60s</div>
@@ -517,529 +290,231 @@ body {
 <div class="disc">⚠ 仅供参考，不构成投资建议</div>
 
 <script>
-// ════════════════════════════════
-// 配置
-// ════════════════════════════════
-const SYM = 'TSLA';
-const AVG_VOL = 71_590_000;   // 近期日均成交量
-const AVG_RANGE = 12.0;       // 近期日均波动幅度（美元）
+const SYM='TSLA',AVG_VOL=71590000,AVG_RANGE=12.0;
+const TECH={weeklyTrend:-1,ma50Above:false,analystScore:-1};
+let mkt=null,cdSec=60,cdTimer,slots=[],slotTimers={};
+const $=id=>document.getElementById(id);
+const f2=n=>Number(n).toFixed(2);
+const fM=n=>(n/1e6).toFixed(1)+'M';
+const fHM=d=>d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+const pad=n=>String(n).padStart(2,'0');
+const clamp=(v,a,b)=>Math.min(Math.max(v,a),b);
+const now=()=>new Date();
 
-// 技术面背景（基于最新搜索数据，每次刷新时辅助算法）
-const TECH_BG = {
-  weeklyTrend: -1,     // -1=偏空  0=中性  1=偏多
-  ma50Above: false,    // 价格是否在50日均线上方（当前价格376低于50日MA ~387）
-  ma200Below: true,    // 价格是否在200日均线下方
-  bbPosition: 'mid',   // 布林带位置: 'low'/'mid'/'high'
-  analystScore: -1,    // 分析师综合: -1=偏空(Strong Sell技术面)
-};
+function setS(s,t){$('led').className='led '+(s==='ok'?'ok':s==='spin'?'spin':'err');$('statusTxt').textContent=t}
+function showErr(m){$('errBox').style.display='block';$('errBox').textContent=m;$('manualRow').style.display='flex'}
 
-// ════════════════════════════════
-// 状态
-// ════════════════════════════════
-let mkt = null;           // 最新市场数据
-let cdSec = 60, cdTimer;
-let slots = [];           // 小时时段
-let slotTimers = {};
+async function tryF(url){const r=await fetch(url,{signal:AbortSignal.timeout(7000)});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
 
-// ════════════════════════════════
-// 工具函数
-// ════════════════════════════════
-const $ = id => document.getElementById(id);
-const fmt2 = n => n.toFixed(2);
-const fmtM = n => (n / 1e6).toFixed(1) + 'M';
-const fmtTime = d => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-const now = () => new Date();
-
-function setStatus(state, txt) {
-  $('led').className = 'led ' + ({ ok:'ok', spin:'spin', err:'err' }[state] || '');
-  $('statusTxt').textContent = txt;
-}
-
-function showErr(msg) {
-  $('errBox').style.display = 'block';
-  $('errBox').textContent = msg;
-  $('manualRow').style.display = 'flex';
-}
-
-// ════════════════════════════════
-// 数据获取（多数据源 + CORS代理）
-// ════════════════════════════════
-async function tryFetch(url) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(7000) });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
-}
-
-async function fetchData() {
-  setStatus('spin', '获取数据');
-  $('errBox').style.display = 'none';
-
-  const base = `https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=5m&range=1d`;
-  const sources = [
-    base,
-    base.replace('query1', 'query2'),
+async function fetchData(){
+  setS('spin','获取数据');$('errBox').style.display='none';
+  const base=`https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=5m&range=1d`;
+  const srcs=[base,base.replace('query1','query2'),
     `https://corsproxy.io/?url=${encodeURIComponent(base)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`,
-  ];
-
-  for (const url of sources) {
-    try {
-      const d = await tryFetch(url);
-      if (processData(d)) { resetCD(); return; }
-    } catch(e) { console.warn(url.slice(0,40), e.message); }
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`];
+  for(const url of srcs){
+    try{const d=await tryF(url);if(proc(d)){resetCD();return;}}
+    catch(e){console.warn(e.message);}
   }
-
-  setStatus('err', '连接失败');
-  showErr('无法获取实时数据。请检查网络，或手动输入当前TSLA价格：');
+  setS('err','连接失败');
+  showErr('无法获取实时数据，请手动输入当前TSLA价格：');
   resetCD();
 }
 
-// ════════════════════════════════
-// 数据处理
-// ════════════════════════════════
-function processData(raw) {
-  const res = raw?.chart?.result?.[0];
-  if (!res) return false;
-
-  const meta = res.meta || {};
-  const q = res.indicators?.quote?.[0] || {};
-  const closes = (q.close  || []).filter(Boolean);
-  const opens2  = (q.open   || []).filter(Boolean);
-  const highs   = (q.high   || []).filter(Boolean);
-  const lows    = (q.low    || []).filter(Boolean);
-  const vols    = (q.volume || []).filter(Boolean);
-
-  // 核心数据
-  const price     = meta.regularMarketPrice || closes.at(-1) || 0;
-  const open      = meta.regularMarketOpen  || opens2[0] || price;
-  const high      = meta.regularMarketDayHigh || (highs.length ? Math.max(...highs) : price);
-  const low       = meta.regularMarketDayLow  || (lows.length  ? Math.min(...lows)  : price);
-  const prevClose = meta.chartPreviousClose   || meta.previousClose || price;
-  const volume    = meta.regularMarketVolume  || vols.reduce((a,b)=>a+b,0) || 0;
-  const change    = price - prevClose;
-  const changePct = prevClose ? (change / prevClose * 100) : 0;
-  const state     = meta.marketState || 'CLOSED';
-
-  // 计算短期动量（最近12根5分钟K线 = 1小时）
-  const recent = closes.slice(-12);
-  const momentum1h = recent.length > 1
-    ? ((recent.at(-1) - recent[0]) / recent[0] * 100) : 0;
-
-  // 成交量趋势
-  const recentVol = vols.slice(-6).reduce((a,b)=>a+b,0);
-  const prevVol   = vols.slice(-12,-6).reduce((a,b)=>a+b,0) || recentVol;
-  const volMom    = prevVol ? ((recentVol - prevVol) / prevVol * 100) : 0;
-
-  mkt = { price, open, high, low, prevClose, volume, change, changePct, state, momentum1h, volMom };
-
-  renderPrice();
-  renderDayPred();
-  renderRangePred();
-  renderHourSlots();
-  renderMetrics();
-  addLog(price, changePct, volume);
-  setStatus('ok', 'Yahoo Finance');
-  return true;
+function proc(raw){
+  try{
+    const res=raw?.chart?.result?.[0];if(!res)return false;
+    const meta=res.meta||{},q=res.indicators?.quote?.[0]||{};
+    const closes=(q.close||[]).filter(Boolean);
+    const highs=(q.high||[]).filter(Boolean);
+    const lows=(q.low||[]).filter(Boolean);
+    const vols=(q.volume||[]).filter(Boolean);
+    const opens2=(q.open||[]).filter(Boolean);
+    const price=meta.regularMarketPrice||closes.at(-1)||0;
+    const open=meta.regularMarketOpen||opens2[0]||price;
+    const high=meta.regularMarketDayHigh||(highs.length?Math.max(...highs):price);
+    const low=meta.regularMarketDayLow||(lows.length?Math.min(...lows):price);
+    const prevClose=meta.chartPreviousClose||meta.previousClose||price;
+    const volume=meta.regularMarketVolume||vols.reduce((a,b)=>a+b,0)||0;
+    const change=price-prevClose;
+    const changePct=prevClose?(change/prevClose*100):0;
+    const state=meta.marketState||'CLOSED';
+    const rc=closes.slice(-12);
+    const momentum1h=rc.length>1?((rc.at(-1)-rc[0])/rc[0]*100):0;
+    const rv=vols.slice(-6).reduce((a,b)=>a+b,0);
+    const pv=vols.slice(-12,-6).reduce((a,b)=>a+b,0)||rv;
+    const volMom=pv?((rv-pv)/pv*100):0;
+    mkt={price,open,high,low,prevClose,volume,change,changePct,state,momentum1h,volMom};
+    renderAll();setS('ok','Yahoo Finance');return true;
+  }catch(e){console.error(e);return false;}
 }
 
-// ════════════════════════════════
-// 渲染：价格
-// ════════════════════════════════
-function renderPrice() {
-  const { price, change, changePct, open, state } = mkt;
-  const isUp = change >= 0;
+function renderAll(){rPrice();rDay();rRange();rHours();rMetrics();addLog(mkt.price,mkt.changePct,mkt.volume);}
 
-  $('priceNum').textContent = '$' + fmt2(price);
-  $('priceNum').className = 'price-num ' + (isUp ? 'up' : 'dn');
+function rPrice(){
+  const{price,change,changePct,open,state}=mkt,up=change>=0;
+  $('priceNum').textContent='$'+f2(price);$('priceNum').className='price-num '+(up?'up':'dn');
+  $('priceChg').textContent=(up?'▲ +':'▼ ')+f2(Math.abs(change))+' ('+(up?'+':'')+f2(changePct)+'%)';
+  $('priceChg').className='price-chg '+(up?'up':'dn');
+  $('priceTs').textContent=fHM(now())+' 更新';
+  const isOpen=state==='REGULAR',isPre=state==='PRE';
+  $('mktBadge').textContent=isOpen?'交易中':isPre?'盘前':'已收盘';
+  $('mktBadge').className='mkt-badge '+(isOpen?'open':isPre?'pre':'closed');
+  $('openVal').textContent='$'+f2(open);
+  if(!isOpen&&!isPre){
+    const d=price-open;
+    $('closeVal').textContent='$'+f2(price);$('closeVal').className='oc-val '+(d>=0?'up':'dn');
+    $('closeSub').textContent=(d>=0?'▲ +':'▼ ')+f2(Math.abs(d))+' ('+f2(d/open*100)+'%)';
+  }else{$('closeVal').textContent='等待收盘';$('closeVal').className='oc-val dim';$('closeSub').textContent='16:00 EST 更新';}
+}
 
-  $('priceChg').textContent = (isUp ? '▲ +' : '▼ ') + fmt2(Math.abs(change)) +
-    ' (' + (isUp ? '+' : '') + fmt2(changePct) + '%)';
-  $('priceChg').className = 'price-chg ' + (isUp ? 'up' : 'dn');
-  $('priceTs').textContent = fmtTime(now()) + ' 更新';
-
-  const badge = $('mktBadge');
-  const isOpen = state === 'REGULAR';
-  const isPre  = state === 'PRE';
-  badge.textContent = isOpen ? '交易中' : isPre ? '盘前' : '已收盘';
-  badge.className   = 'mkt-badge ' + (isOpen ? 'open' : isPre ? 'pre' : 'closed');
-
-  $('openVal').textContent = '$' + fmt2(open);
-  if (!isOpen && !isPre) {
-    const d = price - open;
-    $('closeVal').textContent = '$' + fmt2(price);
-    $('closeVal').className = 'oc-val ' + (d >= 0 ? 'up' : 'dn');
-    $('closeSub').textContent = (d >= 0 ? '▲ +' : '▼ ') + fmt2(Math.abs(d)) +
-      ' (' + fmt2(d / open * 100) + '%)';
-  } else {
-    $('closeVal').textContent = '等待收盘';
-    $('closeVal').className = 'oc-val dim';
-    $('closeSub').textContent = '16:00 EST 更新';
+function calcSig(ctx){
+  const{price,open,high,low,prevClose,volume,changePct,momentum1h,volMom,slotIdx}=ctx;
+  let score=0;const bull=[],bear=[],neut=[];
+  const gap=((open-prevClose)/prevClose*100);
+  if(gap>1.5){score+=2;bull.push('高开'+gap.toFixed(1)+'%')}else if(gap>0.3){score+=1;bull.push('小幅高开')}
+  else if(gap<-1.5){score-=2;bear.push('低开'+Math.abs(gap).toFixed(1)+'%')}else if(gap<-0.3){score-=1;bear.push('小幅低开')}else neut.push('平开');
+  if(changePct>2){score+=3;bull.push('强势涨+'+changePct.toFixed(1)+'%')}else if(changePct>0.8){score+=2;bull.push('日内偏多')}
+  else if(changePct>0){score+=1;bull.push('微涨')}else if(changePct<-2){score-=3;bear.push('大幅跌'+changePct.toFixed(1)+'%')}
+  else if(changePct<-0.8){score-=2;bear.push('日内偏空')}else{score-=1;bear.push('微跌')}
+  if(momentum1h>0.5){score+=1;bull.push('1H动量正向')}else if(momentum1h<-0.5){score-=1;bear.push('1H动量负向')}
+  const vr=volume/AVG_VOL;
+  if(vr>1.4&&changePct>0){score+=2;bull.push('放量上涨')}if(vr>1.4&&changePct<0){score-=2;bear.push('放量下跌')}
+  if(vr>1.1&&changePct>0){score+=1;bull.push('量价配合')}if(vr<0.7)neut.push('成交量萎缩');
+  const rng=high-low,pos=rng>0.01?(price-low)/rng:0.5;
+  if(pos>0.75){score+=1;bull.push('运行高位')}else if(pos<0.25){score-=1;bear.push('运行低位')}else neut.push('区间中段');
+  if(TECH.weeklyTrend===-1){score-=1;bear.push('周线偏空')}
+  if(!TECH.ma50Above){score-=1;bear.push('低于MA50')}
+  if(TECH.analystScore<0){score-=1;bear.push('技术面强卖')}
+  if(slotIdx!==undefined){
+    if(slotIdx===0){score+=(changePct>0?1:-1);neut.push('开盘延续')}
+    if(slotIdx===2||slotIdx===3){score=Math.round(score*0.7);neut.push('午盘低流动')}
+    if(slotIdx>=5){score+=(changePct>0?1:-1);neut.push('尾盘方向')}
+    if(volMom>20&&changePct>0){score+=1;bull.push('近期量增')}
+    if(volMom>20&&changePct<0){score-=1;bear.push('近期量增跌')}
   }
+  const up=Math.round(clamp(50+score*2.8,36,68));
+  return{up,down:100-up,score,bull,bear,neut};
 }
 
-// ════════════════════════════════
-// 预测核心算法
-// ════════════════════════════════
-function calcSignals(ctx) {
-  const { price, open, high, low, prevClose, volume, changePct, momentum1h, volMom, slotIdx } = ctx;
-  let score = 0;
-  const bull = [], bear = [], neut = [];
-
-  // ① 开盘缺口
-  const gap = ((open - prevClose) / prevClose * 100);
-  if      (gap >  1.5) { score += 2; bull.push('高开' + gap.toFixed(1) + '%'); }
-  else if (gap >  0.3) { score += 1; bull.push('小幅高开'); }
-  else if (gap < -1.5) { score -= 2; bear.push('低开' + Math.abs(gap).toFixed(1) + '%'); }
-  else if (gap < -0.3) { score -= 1; bear.push('小幅低开'); }
-  else                  {             neut.push('平开'); }
-
-  // ② 当日涨跌动能
-  if      (changePct >  2)   { score += 3; bull.push('强势涨+' + changePct.toFixed(1) + '%'); }
-  else if (changePct >  0.8) { score += 2; bull.push('日内偏多'); }
-  else if (changePct >  0)   { score += 1; bull.push('微涨'); }
-  else if (changePct < -2)   { score -= 3; bear.push('大幅跌' + changePct.toFixed(1) + '%'); }
-  else if (changePct < -0.8) { score -= 2; bear.push('日内偏空'); }
-  else                        { score -= 1; bear.push('微跌'); }
-
-  // ③ 1小时短期动量
-  if      (momentum1h >  0.5) { score += 1; bull.push('1H动量正向'); }
-  else if (momentum1h < -0.5) { score -= 1; bear.push('1H动量负向'); }
-
-  // ④ 成交量
-  const vr = volume / AVG_VOL;
-  if (vr > 1.4 && changePct > 0) { score += 2; bull.push('放量上涨'); }
-  if (vr > 1.4 && changePct < 0) { score -= 2; bear.push('放量下跌'); }
-  if (vr > 1.1 && changePct > 0) { score += 1; bull.push('量价配合'); }
-  if (vr < 0.7)                  {             neut.push('成交量萎缩'); }
-
-  // ⑤ 价格在日内区间的位置
-  const range = high - low;
-  const pos = range > 0.01 ? (price - low) / range : 0.5;
-  if      (pos > 0.75) { score += 1; bull.push('运行高位'); }
-  else if (pos < 0.25) { score -= 1; bear.push('运行低位'); }
-  else                 {             neut.push('区间中段'); }
-
-  // ⑥ 技术面背景（均线、分析师）
-  if (TECH_BG.weeklyTrend === -1) { score -= 1; bear.push('周线偏空'); }
-  if (!TECH_BG.ma50Above)         { score -= 1; bear.push('价格低于MA50'); }
-  if (TECH_BG.analystScore < 0)   { score -= 1; bear.push('技术面强卖'); }
-
-  // ⑦ 时段因子（小时预测专用）
-  if (slotIdx !== undefined) {
-    // 开盘第一小时：跟随动能
-    if (slotIdx === 0) { score += (changePct > 0 ? 1 : -1); neut.push('开盘延续'); }
-    // 午盘（11:30-13:30）：成交量低迷，方向偏中性
-    if (slotIdx === 2 || slotIdx === 3) {
-      score = Math.round(score * 0.7); // 减弱信号
-      neut.push('午盘低流动');
-    }
-    // 尾盘（14:30-16:00）：方向强化
-    if (slotIdx >= 5) { score += (changePct > 0 ? 1 : -1); neut.push('尾盘方向'); }
-    // 成交量近期趋势
-    if (volMom > 20 && changePct > 0) { score += 1; bull.push('近期量增'); }
-    if (volMom > 20 && changePct < 0) { score -= 1; bear.push('近期量增跌'); }
-  }
-
-  const raw  = Math.min(Math.max(50 + score * 2.8, 36), 68);
-  const up   = Math.round(raw);
-  const down = 100 - up;
-  return { up, down, score, bull, bear, neut };
+function rDay(){
+  const sig=calcSig({...mkt}),isUp=sig.up>=sig.down,prob=isUp?sig.up:sig.down;
+  $('dayPred').className='day-pred '+(isUp?'bullish':'bearish');
+  $('dayDir').textContent=isUp?'▲ 看涨':'▼ 看跌';$('dayDir').className='pred-dir '+(isUp?'up':'dn');
+  $('dayConf').textContent=prob+'%';$('dayConf').className='conf-num '+(isUp?'up':'dn');
+  $('upBar').style.width=sig.up+'%';$('dnBar').style.width=sig.down+'%';
+  $('upPct').textContent=sig.up+'%';$('dnPct').textContent=sig.down+'%';
+  $('mScore').textContent=(sig.score>0?'+':'')+sig.score;
+  $('mScore').className='met-val '+(sig.score>0?'up':sig.score<0?'dn':'neutral');
+  const tags=$('sigTags');tags.innerHTML='';
+  sig.bull.forEach(t=>tags.insertAdjacentHTML('beforeend',`<span class="sig-tag bull">▲ ${t}</span>`));
+  sig.bear.forEach(t=>tags.insertAdjacentHTML('beforeend',`<span class="sig-tag bear">▼ ${t}</span>`));
+  sig.neut.forEach(t=>tags.insertAdjacentHTML('beforeend',`<span class="sig-tag neutral">· ${t}</span>`));
 }
 
-// ════════════════════════════════
-// 渲染：日内价格区间预测
-// ════════════════════════════════
-function calcRange(d) {
-  const { price, open, high, low, prevClose, changePct } = d;
-
-  // 基础波动参数
-  // TSLA近期日均波动约 $12（基于搜索数据：区间 370~383 = $12）
-  // 用ATR近似值，结合当日已有振幅动态调整
-  const historicalATR = AVG_RANGE; // ~12美元
-  const curRange = high - low;     // 当日已有振幅
-  const atr = Math.max(historicalATR, curRange * 1.1); // 取较大值
-
-  // 根据整体方向偏移区间中心
-  const dirBias = changePct >= 0 ? 0.55 : 0.45; // 多头偏高，空头偏低
-
-  // 预测低点和高点
-  const predLow  = Math.min(low,  price - atr * (1 - dirBias));
-  const predHigh = Math.max(high, price + atr * dirBias);
-
-  // 支撑 / 阻力（取整至0.5）
-  const round05 = v => Math.round(v * 2) / 2;
-  const support  = round05(predLow  + (predHigh - predLow) * 0.2);
-  const resist   = round05(predLow  + (predHigh - predLow) * 0.8);
-
-  return { predLow, predHigh, support, resist, atr };
+function rRange(){
+  const{price,high,low,changePct}=mkt;
+  const curRange=high-low,atr=Math.max(AVG_RANGE,curRange*1.15);
+  const bias=changePct>=0?0.55:0.45;
+  const predLow=Math.min(low,price-atr*(1-bias));
+  const predHigh=Math.max(high,price+atr*bias);
+  const span=predHigh-predLow,r05=v=>Math.round(v*2)/2;
+  const support=r05(predLow+span*0.2),resist=r05(predLow+span*0.8);
+  $('rangeLow').textContent='$'+f2(predLow);
+  $('rangeHigh').textContent='$'+f2(predHigh);
+  $('rangeLowPct').textContent=f2((predLow-price)/price*100)+'%';
+  $('rangeHighPct').textContent='+'+f2((predHigh-price)/price*100)+'%';
+  $('rangeCur').textContent='$'+f2(price);
+  $('rangeLowLbl').textContent='$'+f2(predLow);
+  $('rangeHighLbl').textContent='$'+f2(predHigh);
+  $('rangeDot').style.left=clamp(span>0?((price-predLow)/span*100):50,5,95)+'%';
+  $('rsAmp').textContent='$'+f2(predHigh-predLow);
+  $('rsSupport').textContent='$'+f2(support);
+  $('rsResist').textContent='$'+f2(resist);
 }
 
-function renderRangePred() {
-  const { price } = mkt;
-  const { predLow, predHigh, support, resist, atr } = calcRange(mkt);
-
-  const lowPct  = ((predLow  - price) / price * 100);
-  const highPct = ((predHigh - price) / price * 100);
-  const amp     = predHigh - predLow;
-
-  // 大数字
-  $('rangeLow').textContent  = '$' + fmt2(predLow);
-  $('rangeHigh').textContent = '$' + fmt2(predHigh);
-  $('rangeLowPct').textContent  = fmt2(lowPct)  + '%';
-  $('rangeHighPct').textContent = '+' + fmt2(highPct) + '%';
-  $('rangeCur').textContent = '$' + fmt2(price);
-
-  // 可视化条：计算当前价在区间内的位置
-  const totalSpan = predHigh - predLow;
-  const curPos = totalSpan > 0 ? ((price - predLow) / totalSpan * 100) : 50;
-  const clamp = (v, mn, mx) => Math.min(Math.max(v, mn), mx);
-  const dotPct = clamp(curPos, 5, 95);
-
-  $('rangeFill').style.left  = '0%';
-  $('rangeFill').style.right = '0%';
-  $('rangeDot').style.left   = dotPct + '%';
-  $('rangeLowLbl').textContent  = '$' + fmt2(predLow);
-  $('rangeHighLbl').textContent = '$' + fmt2(predHigh);
-
-  // 统计
-  $('rsAmp').textContent     = '$' + fmt2(amp);
-  $('rsSupport').textContent = '$' + fmt2(support);
-  $('rsResist').textContent  = '$' + fmt2(resist);
+function buildSlots(){
+  const t=now();
+  return[[9,30,10,30],[10,30,11,30],[11,30,12,30],[12,30,13,30],[13,30,14,30],[14,30,16,0]]
+    .map(([sh,sm,eh,em],idx)=>{
+      const st=new Date(t);st.setHours(sh-3,sm,0,0);
+      const et=new Date(t);et.setHours(eh-3,em,0,0);
+      return{label:`${pad(sh)}:${pad(sm)}-${pad(eh)}:${pad(em)} EST`,st,et,idx,pred:null,cls:null,conf:null,sp:null,result:null};
+    });
 }
 
-// ════════════════════════════════
-// 渲染：全天预测
-// ════════════════════════════════
-function renderDayPred() {
-  const sig = calcSignals({ ...mkt });
-  const isUp = sig.up >= sig.down;
-  const prob = isUp ? sig.up : sig.down;
-  const dir  = isUp ? '▲ 看涨' : '▼ 看跌';
-  const cls  = isUp ? 'up' : 'dn';
-
-  $('dayPred').className = 'day-pred ' + (isUp ? 'bullish' : 'bearish');
-  $('dayDir').textContent = dir;
-  $('dayDir').className = 'pred-dir ' + cls;
-  $('dayConf').textContent = prob + '%';
-  $('dayConf').className = 'conf-num ' + cls;
-  $('upBar').style.width = sig.up + '%';
-  $('dnBar').style.width = sig.down + '%';
-  $('upPct').textContent = sig.up + '%';
-  $('dnPct').textContent = sig.down + '%';
-  $('mScore').textContent = (sig.score > 0 ? '+' : '') + sig.score;
-  $('mScore').className = 'met-val ' + (sig.score > 0 ? 'up' : sig.score < 0 ? 'dn' : 'neutral');
-
-  // 信号标签
-  const tags = $('sigTags');
-  tags.innerHTML = '';
-  sig.bull.forEach(t => tags.insertAdjacentHTML('beforeend', `<span class="sig-tag bull">▲ ${t}</span>`));
-  sig.bear.forEach(t => tags.insertAdjacentHTML('beforeend', `<span class="sig-tag bear">▼ ${t}</span>`));
-  sig.neut.forEach(t => tags.insertAdjacentHTML('beforeend', `<span class="sig-tag neutral">· ${t}</span>`));
-}
-
-// ════════════════════════════════
-// 小时时段定义（EST）
-// ════════════════════════════════
-function buildSlots() {
-  // 用当前时区近似（用户在加州=PST/PDT）
-  // 交易时间 EST 9:30-16:00 = PDT 6:30-13:00
-  const today = now();
-  const defs = [
-    [9,30,10,30], [10,30,11,30], [11,30,12,30],
-    [12,30,13,30], [13,30,14,30], [14,30,16,0]
-  ];
-  return defs.map(([sh,sm,eh,em], idx) => {
-    // 转换为本地时间 (用户是PDT = EST-3)
-    const st = new Date(today); st.setHours(sh-3, sm, 0, 0); // PDT
-    const et = new Date(today); et.setHours(eh-3, em, 0, 0);
-    return { label: `${pad(sh)}:${pad(sm)}–${pad(eh)}:${pad(em)} EST`, st, et, idx,
-             pred: null, cls: null, conf: null, sp: null, ep: null, result: null };
-  });
-}
-function pad(n) { return String(n).padStart(2,'0'); }
-
-function renderHourSlots() {
-  const n = now();
-  if (slots.length === 0) slots = buildSlots();
-
-  // 更新当前激活时段的预测
-  slots.forEach((s, i) => {
-    const isActive = n >= s.st && n < s.et;
-    if (isActive && !s.pred && mkt) {
-      const sig = calcSignals({ ...mkt, slotIdx: i });
-      s.pred = sig.up >= sig.down ? '▲ 看涨' : '▼ 看跌';
-      s.cls  = sig.up >= sig.down ? 'up' : 'dn';
-      s.conf = sig.up >= sig.down ? sig.up : sig.down;
-      s.sp   = mkt.price;
-      scheduleSlotEnd(s, i);
+function rHours(){
+  const n=now();
+  if(!slots.length)slots=buildSlots();
+  slots.forEach((s,i)=>{
+    const active=n>=s.st&&n<s.et;
+    if(active&&!s.pred&&mkt){
+      const sig=calcSig({...mkt,slotIdx:i});
+      s.pred=sig.up>=sig.down?'▲ 看涨':'▼ 看跌';
+      s.cls=sig.up>=sig.down?'up':'dn';
+      s.conf=sig.up>=sig.down?sig.up:sig.down;
+      s.sp=mkt.price;schedEnd(s,i);
     }
   });
-
-  const list = $('hourList');
-  list.innerHTML = '';
-  slots.forEach(s => {
-    const n2 = now();
-    const isActive = n2 >= s.st && n2 < s.et;
-    const isPast   = n2 >= s.et;
-    const isFuture = n2 < s.st;
-
-    let timeClass = isActive ? 'hs-time active' : 'hs-time';
-    let predHTML, confHTML, resHTML;
-    let slotClass = 'hslot';
-    if (isActive) slotClass += ' active';
-    if (isPast && s.result !== null) slotClass += s.result >= 0 ? ' hit-up' : ' hit-dn';
-
-    if (isFuture) {
-      predHTML = `<span class="hs-pred wait">待预测</span>`;
-      confHTML = `<span class="hs-conf">--</span>`;
-      resHTML  = `<span class="hs-result wait">--</span>`;
-    } else if (isActive) {
-      predHTML = s.pred
-        ? `<span class="hs-pred ${s.cls}">${s.pred}</span>`
-        : `<span class="hs-pred wait">分析中</span>`;
-      confHTML = s.conf ? `<span class="hs-conf">${s.conf}%</span>` : `<span class="hs-conf">--</span>`;
-      // 显示距结束剩余时间
-      const rem = Math.max(0, Math.round((s.et - now()) / 1000));
-      const rm = Math.floor(rem / 60), rs = rem % 60;
-      resHTML = `<span class="hs-result live">剩${rm}:${pad(rs)}</span>`;
-    } else {
-      predHTML = s.pred
-        ? `<span class="hs-pred ${s.cls}">${s.pred}</span>`
-        : `<span class="hs-pred wait">--</span>`;
-      confHTML = s.conf ? `<span class="hs-conf">${s.conf}%</span>` : `<span class="hs-conf">--</span>`;
-      if (s.result !== null) {
-        const pct = (s.result / (s.sp || 1) * 100).toFixed(2);
-        const rc = s.result >= 0 ? 'up' : 'dn';
-        resHTML = `<span class="hs-result ${rc}">${s.result>=0?'+':''}${pct}%</span>`;
-      } else {
-        resHTML = `<span class="hs-result wait">--</span>`;
-      }
+  const list=$('hourList');list.innerHTML='';
+  slots.forEach(s=>{
+    const n2=now(),active=n2>=s.st&&n2<s.et,past=n2>=s.et,future=n2<s.st;
+    let sc='hslot';if(active)sc+=' active';if(past&&s.result!==null)sc+=s.result>=0?' hit-up':' hit-dn';
+    let ph,ch,rh;
+    if(future){ph=`<span class="hs-pred wait">待预测</span>`;ch=`<span class="hs-conf">--</span>`;rh=`<span class="hs-result wait">--</span>`;}
+    else if(active){
+      ph=s.pred?`<span class="hs-pred ${s.cls}">${s.pred}</span>`:`<span class="hs-pred wait">分析中</span>`;
+      ch=s.conf?`<span class="hs-conf">${s.conf}%</span>`:`<span class="hs-conf">--</span>`;
+      const rem=Math.max(0,Math.round((s.et-n2)/1000));
+      rh=`<span class="hs-result live">剩${Math.floor(rem/60)}:${pad(rem%60)}</span>`;
+    }else{
+      ph=s.pred?`<span class="hs-pred ${s.cls}">${s.pred}</span>`:`<span class="hs-pred wait">--</span>`;
+      ch=s.conf?`<span class="hs-conf">${s.conf}%</span>`:`<span class="hs-conf">--</span>`;
+      rh=s.result!==null?`<span class="hs-result ${s.result>=0?'up':'dn'}">${s.result>=0?'+':''}${(s.result/(s.sp||1)*100).toFixed(2)}%</span>`:`<span class="hs-result wait">--</span>`;
     }
-
-    list.insertAdjacentHTML('beforeend', `
-      <div class="${slotClass}">
-        <span class="${timeClass}">${s.label}</span>
-        ${predHTML}
-        ${confHTML}
-        ${resHTML}
-      </div>`);
+    list.insertAdjacentHTML('beforeend',`<div class="${sc}"><span class="hs-time${active?' active':''}">${s.label}</span>${ph}${ch}${rh}</div>`);
   });
 }
 
-function scheduleSlotEnd(slot, idx) {
-  clearTimeout(slotTimers[idx]);
-  const ms = slot.et - now();
-  if (ms <= 0) return;
-  slotTimers[idx] = setTimeout(async () => {
-    // 尝试获取价格作为终止价
-    const ep = await getPrice();
-    if (ep && slot.sp) { slot.ep = ep; slot.result = ep - slot.sp; }
-    renderHourSlots();
-  }, ms);
+async function getP(){
+  for(const url of[`https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`,`https://query2.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`]){
+    try{const r=await fetch(url,{signal:AbortSignal.timeout(5000)});const d=await r.json();const c=d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean)||[];if(c.length)return c.at(-1);}catch(e){}
+  }return null;
+}
+function schedEnd(s,i){
+  clearTimeout(slotTimers[i]);const ms=s.et-now();if(ms<=0)return;
+  slotTimers[i]=setTimeout(async()=>{const ep=await getP();if(ep&&s.sp){s.result=ep-s.sp;}rHours();},ms);
+}
+setInterval(()=>{if(mkt)rHours();},30000);
+
+function rMetrics(){
+  const{changePct,volume,high,low}=mkt,vr=volume/AVG_VOL;
+  $('mChg').textContent=(changePct>=0?'+':'')+f2(changePct)+'%';$('mChg').className='met-val '+(changePct>=0?'up':'dn');
+  $('mChgS').textContent='较昨收 '+(changePct>=0?'▲':'▼');
+  $('mVol').textContent=fM(volume);$('mVol').className='met-val '+(vr>1.1?'up':vr<0.9?'dn':'neutral');
+  $('mVolS').textContent=(vr*100).toFixed(0)+'% 均量';
+  $('mRange').textContent='$'+f2(low)+' ~ $'+f2(high);$('mRangeS').textContent='振幅 $'+f2(high-low);
 }
 
-async function getPrice() {
-  for (const url of [
-    `https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`,
-  ]) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      const d = await r.json();
-      const closes = d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean) || [];
-      if (closes.length) return closes.at(-1);
-    } catch(e) {}
-  }
-  return null;
+function submitManual(){
+  const val=parseFloat($('manualInput').value);if(!val||val<10){alert('请输入有效价格');return;}
+  mkt={price:val,open:373.72,high:Math.max(val,382.76),low:Math.min(val,370.73),prevClose:373.72,
+       volume:62890000,change:val-373.72,changePct:((val-373.72)/373.72*100),state:'CLOSED',momentum1h:val>376?0.3:-0.3,volMom:-5};
+  renderAll();setS('ok','手动模式');$('errBox').style.display='none';
 }
 
-// 每30秒重新渲染小时槽（更新倒计时）
-setInterval(() => { if (mkt) renderHourSlots(); }, 30000);
-
-// ════════════════════════════════
-// 渲染：指标
-// ════════════════════════════════
-function renderMetrics() {
-  const { changePct, volume, high, low } = mkt;
-  const vr = volume / AVG_VOL;
-
-  $('mChg').textContent = (changePct >= 0 ? '+' : '') + fmt2(changePct) + '%';
-  $('mChg').className = 'met-val ' + (changePct >= 0 ? 'up' : 'dn');
-  $('mChgS').textContent = '较昨收 ' + (changePct >= 0 ? '▲' : '▼');
-
-  $('mVol').textContent = fmtM(volume);
-  $('mVol').className = 'met-val ' + (vr > 1.1 ? 'up' : vr < 0.9 ? 'dn' : 'neutral');
-  $('mVolS').textContent = (vr * 100).toFixed(0) + '% 均量';
-
-  $('mRange').textContent = '$' + fmt2(low) + ' ~ $' + fmt2(high);
-  $('mRangeS').textContent = '振幅 $' + fmt2(high - low);
+function addLog(price,chgPct,vol){
+  const row=document.createElement('div');row.className='log-row';
+  const c=chgPct>=0?'up':'dn';
+  row.innerHTML=`<span class="lr-t">${fHM(now())}</span><span class="lr-p">$${f2(price)}</span><span class="lr-c ${c}">${chgPct>=0?'+':''}${f2(chgPct)}%</span><span class="lr-v">${fM(vol||0)}</span>`;
+  const list=$('logList');list.insertBefore(row,list.firstChild);if(list.children.length>20)list.removeChild(list.lastChild);
 }
 
-// ════════════════════════════════
-// 手动模式
-// ════════════════════════════════
-function submitManual() {
-  const val = parseFloat($('manualInput').value);
-  if (!val || val < 10) return alert('请输入有效的TSLA价格');
-
-  // 基于搜索到的最新数据填充背景数据
-  mkt = {
-    price: val,
-    open: 373.72,
-    high: Math.max(val, 382.76),
-    low: Math.min(val, 370.73),
-    prevClose: 373.72,
-    volume: 62_890_000,
-    change: val - 373.72,
-    changePct: ((val - 373.72) / 373.72 * 100),
-    state: 'CLOSED',
-    momentum1h: val > 376 ? 0.3 : -0.3,
-    volMom: -5,
-  };
-
-  renderPrice();
-  renderDayPred();
-  renderRangePred();
-  renderHourSlots();
-  renderMetrics();
-  addLog(val, mkt.changePct, mkt.volume);
-  setStatus('ok', '手动模式');
-  $('errBox').style.display = 'none';
+function resetCD(){
+  clearInterval(cdTimer);cdSec=60;
+  cdTimer=setInterval(()=>{cdSec--;$('cdTxt').textContent='刷新: '+cdSec+'s';if(cdSec<=0)fetchData();},1000);
 }
 
-// ════════════════════════════════
-// 日志
-// ════════════════════════════════
-function addLog(price, chgPct, vol) {
-  const row = document.createElement('div');
-  row.className = 'log-row';
-  const c = chgPct >= 0 ? 'up' : 'dn';
-  row.innerHTML = `
-    <span class="lr-t">${fmtTime(now())}</span>
-    <span class="lr-p">$${fmt2(price)}</span>
-    <span class="lr-c ${c}">${chgPct >= 0 ? '+' : ''}${fmt2(chgPct)}%</span>
-    <span class="lr-v">${fmtM(vol||0)}</span>`;
-  const list = $('logList');
-  list.insertBefore(row, list.firstChild);
-  if (list.children.length > 20) list.removeChild(list.lastChild);
-}
-
-// ════════════════════════════════
-// 倒计时
-// ════════════════════════════════
-function resetCD() {
-  clearInterval(cdTimer);
-  cdSec = 60;
-  cdTimer = setInterval(() => {
-    cdSec--;
-    $('cdTxt').textContent = '刷新: ' + cdSec + 's';
-    if (cdSec <= 0) fetchData();
-  }, 1000);
-}
-
-// ════════════════════════════════
-// 启动
-// ════════════════════════════════
 fetchData();
 </script>
 </body>
