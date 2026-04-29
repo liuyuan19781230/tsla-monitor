@@ -327,6 +327,7 @@ body{
 <script>
 const SYM='TSLA',AVG_VOL=71590000,AVG_RANGE=12.0;
 const TECH={weeklyTrend:-1,ma50Above:false,analystScore:-1};
+const POLY_KEY='QvfDPUdAN48lgrtZQzrZSVA3jfpcKvnM';
 let mkt=null,cdSec=60,cdTimer,slots=[],slotTimers={};
 const $=id=>document.getElementById(id);
 const f2=n=>Number(n).toFixed(2);
@@ -345,49 +346,101 @@ async function tryF(url){
   return r.json();
 }
 
+// 判断当前是否美股交易时间 (EST 9:30-16:00, 即PDT 6:30-13:00)
+function getMarketState(){
+  const n=now();
+  const est=new Date(n.toLocaleString('en-US',{timeZone:'America/New_York'}));
+  const h=est.getHours(),m=est.getMinutes(),day=est.getDay();
+  if(day===0||day===6)return'CLOSED';
+  const mins=h*60+m;
+  if(mins<570)return'PRE';      // 9:30 = 570
+  if(mins<960)return'REGULAR';  // 16:00 = 960
+  return'CLOSED';
+}
+
 async function fetchData(){
   setS('spin','获取数据');$('errBox').style.display='none';
-  const base=`https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=5m&range=1d`;
-  const srcs=[
-    base,base.replace('query1','query2'),
-    `https://corsproxy.io/?url=${encodeURIComponent(base)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`
-  ];
-  for(const url of srcs){
-    try{const d=await tryF(url);if(proc(d)){resetCD();return;}}
-    catch(e){console.warn(e.message);}
-  }
+
+  try{
+    const today=new Date();
+    const dateStr=today.toISOString().slice(0,10);
+    const prevDate=new Date(today);
+    prevDate.setDate(prevDate.getDate()-5);
+    const prevStr=prevDate.toISOString().slice(0,10);
+
+    // 免费版可用接口：日K线 + 分钟K线
+    const [barsRes, prevRes] = await Promise.all([
+      // 今日5分钟K线
+      tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/5/minute/${dateStr}/${dateStr}?adjusted=true&sort=asc&limit=100&apiKey=${POLY_KEY}`),
+      // 近5日日K（获取昨收）
+      tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/day/${prevStr}/${dateStr}?adjusted=true&sort=desc&limit=5&apiKey=${POLY_KEY}`)
+    ]);
+
+    if(procPoly(barsRes, prevRes)){resetCD();return;}
+  }catch(e){console.warn('Polygon error:',e.message);}
+
   setS('err','连接失败');
-  showErr('无法获取实时数据，请手动输入当前TSLA价格：');
+  showErr('⚠️ 请通过GitHub Pages网址访问，不要直接打开下载的文件。或手动输入当前TSLA价格：');
   resetCD();
 }
 
-function proc(raw){
+function procPoly(barsRes, prevRes){
   try{
-    const res=raw?.chart?.result?.[0];if(!res)return false;
-    const meta=res.meta||{},q=res.indicators?.quote?.[0]||{};
-    const closes=(q.close||[]).filter(Boolean);
-    const highs=(q.high||[]).filter(Boolean);
-    const lows=(q.low||[]).filter(Boolean);
-    const vols=(q.volume||[]).filter(Boolean);
-    const opens2=(q.open||[]).filter(Boolean);
-    const price=meta.regularMarketPrice||closes.at(-1)||0;
-    const open=meta.regularMarketOpen||opens2[0]||price;
-    const high=meta.regularMarketDayHigh||(highs.length?Math.max(...highs):price);
-    const low=meta.regularMarketDayLow||(lows.length?Math.min(...lows):price);
-    const prevClose=meta.chartPreviousClose||meta.previousClose||price;
-    const volume=meta.regularMarketVolume||vols.reduce((a,b)=>a+b,0)||0;
+    const bars=barsRes?.results||[];
+    if(!bars.length)return false;
+
+    // 从K线提取今日数据
+    const closes=bars.map(b=>b.c).filter(Boolean);
+    const highs=bars.map(b=>b.h).filter(Boolean);
+    const lows=bars.map(b=>b.l).filter(Boolean);
+    const vols=bars.map(b=>b.v).filter(Boolean);
+    const opens=bars.map(b=>b.o).filter(Boolean);
+
+    const price=closes.at(-1)||0;
+    if(!price)return false;
+
+    const open=opens[0]||price;
+    const high=Math.max(...highs);
+    const low=Math.min(...lows);
+    const volume=vols.reduce((a,b)=>a+b,0);
+
+    // 昨收：从日K里找今天之前最近的一根
+    const todayStr=new Date().toISOString().slice(0,10);
+    let prevClose=0;
+    if(prevRes?.results?.length){
+      const prev=prevRes.results.find(r=>{
+        const d=new Date(r.t).toISOString().slice(0,10);
+        return d<todayStr;
+      });
+      if(prev)prevClose=prev.c;
+    }
+    if(!prevClose)prevClose=open;
+
     const change=price-prevClose;
     const changePct=prevClose?(change/prevClose*100):0;
-    const state=meta.marketState||'CLOSED';
+    const state=getMarketState();
+
+    // 动量计算
     const rc=closes.slice(-12);
     const momentum1h=rc.length>1?((rc.at(-1)-rc[0])/rc[0]*100):0;
     const rv=vols.slice(-6).reduce((a,b)=>a+b,0);
     const pv=vols.slice(-12,-6).reduce((a,b)=>a+b,0)||rv;
     const volMom=pv?((rv-pv)/pv*100):0;
+
     mkt={price,open,high,low,prevClose,volume,change,changePct,state,momentum1h,volMom};
-    renderAll();setS('ok','Yahoo Finance');return true;
-  }catch(e){console.error(e);return false;}
+    renderAll();
+    setS('ok','Polygon.io');
+    return true;
+  }catch(e){console.error('procPoly:',e);return false;}
+}
+
+// 获取单一实时价格（用于小时槽结束）
+async function getP(){
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    const d=await tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/minute/${today}/${today}?adjusted=true&sort=desc&limit=1&apiKey=${POLY_KEY}`);
+    return d?.results?.[0]?.c||null;
+  }catch(e){return null;}
 }
 
 function renderAll(){rPrice();rDay();rRange();rHours();rMetrics();addLog(mkt.price,mkt.changePct,mkt.volume);}
@@ -542,20 +595,6 @@ function rHours(){
     list.insertAdjacentHTML('beforeend',
       `<div class="${sc}"><span class="hs-time${active?' active':''}">${s.label}</span>${ph}${ch}${rh}</div>`);
   });
-}
-
-async function getP(){
-  for(const url of[
-    `https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1m&range=1d`
-  ]){
-    try{
-      const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
-      const d=await r.json();
-      const c=d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(Boolean)||[];
-      if(c.length)return c.at(-1);
-    }catch(e){}
-  }return null;
 }
 
 function schedEnd(s,i){
