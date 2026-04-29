@@ -363,69 +363,79 @@ async function fetchData(){
 
   try{
     const today=new Date();
-    const dateStr=today.toISOString().slice(0,10);
-    const prevDate=new Date(today);
-    prevDate.setDate(prevDate.getDate()-5);
-    const prevStr=prevDate.toISOString().slice(0,10);
+    // 往前找7天，确保能覆盖周末+节假日
+    const endDate=today.toISOString().slice(0,10);
+    const startDate=new Date(today);
+    startDate.setDate(startDate.getDate()-7);
+    const startStr=startDate.toISOString().slice(0,10);
 
-    // 免费版可用接口：日K线 + 分钟K线
-    const [barsRes, prevRes] = await Promise.all([
-      // 今日5分钟K线
-      tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/5/minute/${dateStr}/${dateStr}?adjusted=true&sort=asc&limit=100&apiKey=${POLY_KEY}`),
-      // 近5日日K（获取昨收）
-      tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/day/${prevStr}/${dateStr}?adjusted=true&sort=desc&limit=5&apiKey=${POLY_KEY}`)
-    ]);
+    // 先拿近7天日K（确定最近交易日）
+    const prevRes=await tryF(
+      `https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/day/${startStr}/${endDate}?adjusted=true&sort=desc&limit=5&apiKey=${POLY_KEY}`
+    );
 
-    if(procPoly(barsRes, prevRes)){resetCD();return;}
+    const results=prevRes?.results||[];
+    if(!results.length)throw new Error('No daily bars');
+
+    // 最近交易日
+    const latestBar=results[0];
+    const latestDate=new Date(latestBar.t).toISOString().slice(0,10);
+    const prevBar=results[1]||null;
+
+    // 再拿最近交易日的5分钟K线
+    const barsRes=await tryF(
+      `https://api.polygon.io/v2/aggs/ticker/${SYM}/range/5/minute/${latestDate}/${latestDate}?adjusted=true&sort=asc&limit=100&apiKey=${POLY_KEY}`
+    );
+
+    if(procPoly(barsRes, latestBar, prevBar)){resetCD();return;}
   }catch(e){console.warn('Polygon error:',e.message);}
 
   setS('err','连接失败');
-  showErr('⚠️ 请通过GitHub Pages网址访问，不要直接打开下载的文件。或手动输入当前TSLA价格：');
+  showErr('无法获取数据，请手动输入当前TSLA价格：');
   resetCD();
 }
 
-function procPoly(barsRes, prevRes){
+function procPoly(barsRes, latestBar, prevBar){
   try{
     const bars=barsRes?.results||[];
-    if(!bars.length)return false;
 
-    // 从K线提取今日数据
-    const closes=bars.map(b=>b.c).filter(Boolean);
-    const highs=bars.map(b=>b.h).filter(Boolean);
-    const lows=bars.map(b=>b.l).filter(Boolean);
-    const vols=bars.map(b=>b.v).filter(Boolean);
-    const opens=bars.map(b=>b.o).filter(Boolean);
+    // 如果有分钟K线用分钟K线，否则直接用日K
+    let price,open,high,low,volume,momentum1h=0,volMom=0;
 
-    const price=closes.at(-1)||0;
+    if(bars.length){
+      const closes=bars.map(b=>b.c).filter(Boolean);
+      const highs=bars.map(b=>b.h).filter(Boolean);
+      const lows=bars.map(b=>b.l).filter(Boolean);
+      const vols=bars.map(b=>b.v).filter(Boolean);
+
+      price=closes.at(-1)||latestBar.c;
+      open=bars[0]?.o||latestBar.o;
+      high=Math.max(...highs,latestBar.h);
+      low=Math.min(...lows,latestBar.l);
+      volume=vols.reduce((a,b)=>a+b,0)||latestBar.v;
+
+      // 动量
+      const rc=closes.slice(-12);
+      momentum1h=rc.length>1?((rc.at(-1)-rc[0])/rc[0]*100):0;
+      const rv=vols.slice(-6).reduce((a,b)=>a+b,0);
+      const pv=vols.slice(-12,-6).reduce((a,b)=>a+b,0)||rv;
+      volMom=pv?((rv-pv)/pv*100):0;
+    } else {
+      // 休市/无分钟K线，直接用日K数据
+      price=latestBar.c;
+      open=latestBar.o;
+      high=latestBar.h;
+      low=latestBar.l;
+      volume=latestBar.v;
+    }
+
     if(!price)return false;
 
-    const open=opens[0]||price;
-    const high=Math.max(...highs);
-    const low=Math.min(...lows);
-    const volume=vols.reduce((a,b)=>a+b,0);
-
-    // 昨收：从日K里找今天之前最近的一根
-    const todayStr=new Date().toISOString().slice(0,10);
-    let prevClose=0;
-    if(prevRes?.results?.length){
-      const prev=prevRes.results.find(r=>{
-        const d=new Date(r.t).toISOString().slice(0,10);
-        return d<todayStr;
-      });
-      if(prev)prevClose=prev.c;
-    }
-    if(!prevClose)prevClose=open;
-
+    // 昨收
+    const prevClose=prevBar?.c||open;
     const change=price-prevClose;
     const changePct=prevClose?(change/prevClose*100):0;
     const state=getMarketState();
-
-    // 动量计算
-    const rc=closes.slice(-12);
-    const momentum1h=rc.length>1?((rc.at(-1)-rc[0])/rc[0]*100):0;
-    const rv=vols.slice(-6).reduce((a,b)=>a+b,0);
-    const pv=vols.slice(-12,-6).reduce((a,b)=>a+b,0)||rv;
-    const volMom=pv?((rv-pv)/pv*100):0;
 
     mkt={price,open,high,low,prevClose,volume,change,changePct,state,momentum1h,volMom};
     renderAll();
@@ -434,11 +444,16 @@ function procPoly(barsRes, prevRes){
   }catch(e){console.error('procPoly:',e);return false;}
 }
 
-// 获取单一实时价格（用于小时槽结束）
+// 获取最新价格（用于小时槽结束）
 async function getP(){
   try{
-    const today=new Date().toISOString().slice(0,10);
-    const d=await tryF(`https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/minute/${today}/${today}?adjusted=true&sort=desc&limit=1&apiKey=${POLY_KEY}`);
+    const today=new Date();
+    const endDate=today.toISOString().slice(0,10);
+    const startDate=new Date(today);
+    startDate.setDate(startDate.getDate()-3);
+    const d=await tryF(
+      `https://api.polygon.io/v2/aggs/ticker/${SYM}/range/1/minute/${startDate.toISOString().slice(0,10)}/${endDate}?adjusted=true&sort=desc&limit=1&apiKey=${POLY_KEY}`
+    );
     return d?.results?.[0]?.c||null;
   }catch(e){return null;}
 }
